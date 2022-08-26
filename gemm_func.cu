@@ -2,20 +2,10 @@
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #include <exception>
+#include <iostream>
+
 #include "gemm_func.hpp"
-
-extern "C" void sgemm_(char *transA, char *transB, int *m, int *n, int *k, float *alpha, float *A, int *lda, float *B, int *ldb, float *beta, float *C, int *ldc);
-extern "C" void dgemm_(char *transA, char *transB, int *m, int *n, int *k, double *alpha, double *A, int *lda, double *B, int *ldb, double *beta, double *C, int *ldc);
-
-template <typename DataType>
-void gemm(char transA, char transB, int m, int n, int k, DataType alpha, DataType * A, int lda, DataType * B, int ldb, DataType beta, DataType * C, int ldc) {
-  if constexpr(std::is_same_v<DataType, float>) {
-    sgemm_(&transA, &transB, &m, &n, &k, &alpha, A, &lda, B, &ldb, &beta, C, &ldc);
-  }
-  if constexpr(std::is_same_v<DataType, double>) {
-    dgemm_(&transA, &transB, &m, &n, &k, &alpha, A, &lda, B, &ldb, &beta, C, &ldc);
-  }
-}
+#include "blas.hpp"
 
 template <typename DataType>
 void gemm_cpu_func(void * buffers[], void * cl_args) {
@@ -34,19 +24,6 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
   gemm(transA, transB, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
 }
 
-cublasOperation_t convertToCublas(char trans) {
-  switch(trans) {
-  case 'N':
-    return CUBLAS_OP_N;
-  case 'T':
-    return CUBLAS_OP_T;
-  case 'C':
-    return CUBLAS_OP_C;
-  default:
-    throw std::exception();
-  }
-}
-
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
   char transA, transB;
@@ -61,9 +38,8 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
   DataType * B = (DataType*)STARPU_MATRIX_GET_PTR(buffers[1]);
   int ld_C = STARPU_MATRIX_GET_LD(buffers[2]);
   DataType * C = (DataType*)STARPU_MATRIX_GET_PTR(buffers[2]);
-  
-  cublasStatus_t stat = cublasSgemm(starpu_cublas_get_local_handle(), convertToCublas(transA), convertToCublas(transB), m, n, k, &alpha, A, ld_A, B, ld_B, &beta, C, ld_C);
-  if(stat != CUBLAS_STATUS_SUCCESS) {
-    printf ("CUBLAS GEMM failed\n");
-  }
+  cublasgemm(starpu_cublas_get_local_handle(), convertToCublas(transA), convertToCublas(transB), m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
 }
+
+template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
+template void gemm_cuda_func<float>(void *buffers[], void *cl_args);

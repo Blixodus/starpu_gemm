@@ -32,8 +32,8 @@ static struct starpu_perfmodel gemm_perf_model =
 
 starpu_codelet gemm_cl = {
   .can_execute = can_execute,
-  .cpu_funcs = { gemm_cpu_func },
-  .cuda_funcs = { gemm_cuda_func },
+  .cpu_funcs = { gemm_cpu_func<float> },
+  .cuda_funcs = { gemm_cuda_func<float> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
   .nbuffers = 3,
 #if ENABLE_REDUX != 0 && TWODIM != 0
@@ -46,8 +46,8 @@ starpu_codelet gemm_cl = {
 
 starpu_codelet bzero_matrix_cl = {
   .can_execute = can_execute,
-  .cpu_funcs = { bzero_matrix_cpu },
-  .cuda_funcs = { bzero_matrix_cuda },
+  .cpu_funcs = { bzero_matrix_cpu<float> },
+  .cuda_funcs = { bzero_matrix_cuda<float> },
   .cpu_funcs_name = { "bzero_matrix_cpu" },
   .nbuffers = 1,
   .modes = { STARPU_W },
@@ -61,8 +61,8 @@ static struct starpu_perfmodel accumulate_perf_model =
 
 starpu_codelet accumulate_matrix_cl = {
   .can_execute = can_execute,
-  .cpu_funcs = { accumulate_matrix_cpu },
-  .cuda_funcs = { accumulate_matrix_cuda },
+  .cpu_funcs = { accumulate_matrix_cpu<float> },
+  .cuda_funcs = { accumulate_matrix_cuda<float> },
   .cpu_funcs_name = { "accumulate_matrix_cpu" },
   .nbuffers = 2,
   .modes = { starpu_data_access_mode(STARPU_RW|STARPU_COMMUTE), STARPU_R },
