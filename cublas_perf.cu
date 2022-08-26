@@ -2,8 +2,9 @@
 #include <iostream>
 #include <chrono>
 #include <fstream>
+#include "cublas_perf.h"
 
-extern "C" void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
+void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
   std::cerr << "================= BEGIN CUBLAS PERF TEST ===============" << std::endl;
   
   cudaError_t cudaStat;

@@ -2,6 +2,7 @@
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #include <exception>
+#include "gemm_func.h"
 
 extern "C" void sgemm_(char *transA, char *transB, int *m, int *n, int *k, float *alpha, float *A, int *lda, float *B, int *ldb, float *beta, float *C, int *ldc);
 extern "C" void dgemm_(char *transA, char *transB, int *m, int *n, int *k, double *alpha, double *A, int *lda, double *B, int *ldb, double *beta, double *C, int *ldc);
@@ -16,8 +17,7 @@ void gemm(char transA, char transB, int m, int n, int k, DataType alpha, DataTyp
   }
 }
 
-extern "C" void gemm_cpu_func(void * buffers[], void * cl_args) {
-  printf("GEMM CPU\n");
+void gemm_cpu_func(void * buffers[], void * cl_args) {
   char transA, transB;
   float alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -46,8 +46,7 @@ cublasOperation_t convertToCublas(char trans) {
   }
 }
 
-extern "C" void gemm_cuda_func(void * buffers[], void * cl_args) {
-  printf("GEMM CUDA\n");
+void gemm_cuda_func(void * buffers[], void * cl_args) {
   char transA, transB;
   float alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -65,5 +64,4 @@ extern "C" void gemm_cuda_func(void * buffers[], void * cl_args) {
   if(stat != CUBLAS_STATUS_SUCCESS) {
     printf ("CUBLAS GEMM failed\n");
   }
-  cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }

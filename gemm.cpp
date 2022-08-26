@@ -7,34 +7,15 @@
 #include <chrono>
 #include <fstream>
 
+#include "cublas_perf.h"
+#include "gemm_func.h"
+#include "bzero_func.h"
+#include "accumulate_func.h"
+
 #define ENABLE 1
 #define DISABLE 0
 #define ENABLE_REDUX 1
 #define TWODIM 1
-
-extern "C" void cublas_perf_test(int, int, int, bool, std::ofstream&);
-
-void minmax_cpu_func(void *buffers[], void *cl_args) {
-  int m = STARPU_MATRIX_GET_NX(buffers[0]);
-  int n = STARPU_MATRIX_GET_NY(buffers[0]);
-  int ld = STARPU_MATRIX_GET_LD(buffers[0]);
-  float *A = (float*)STARPU_MATRIX_GET_PTR(buffers[0]);
-  float *min = (float*)STARPU_MATRIX_GET_PTR(buffers[1]);
-  float *max = (float*)STARPU_MATRIX_GET_PTR(buffers[2]);
-  *min = *max = *A;
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < m; j++) {
-      *min = std::min(*min, A[j + ld * i]);
-      *max = std::max(*max, A[j + ld * i]);
-    }
-  }
-}
-
-starpu_codelet minmax_cl = {
-  .cpu_funcs = { minmax_cpu_func },
-  .nbuffers = 3,
-  .modes = { STARPU_R, STARPU_RW, STARPU_RW },
-};
 
 static int enable_cpu = ENABLE;
 static int enable_gpu = ENABLE;
@@ -49,13 +30,11 @@ static struct starpu_perfmodel gemm_perf_model =
     .symbol = "gemm_perf_model"
 };
 
-extern "C" void gemm_cuda_func(void * buffers[], void * cl_args);
-extern "C" void gemm_cpu_func(void * buffers[], void * cl_args);
 starpu_codelet gemm_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { gemm_cpu_func },
   .cuda_funcs = { gemm_cuda_func },
-  //.cuda_flags = { STARPU_CUDA_ASYNC },
+  .cuda_flags = { STARPU_CUDA_ASYNC },
   .nbuffers = 3,
 #if ENABLE_REDUX != 0 && TWODIM != 0
   .modes = { STARPU_R, STARPU_R, STARPU_REDUX },
@@ -65,8 +44,6 @@ starpu_codelet gemm_cl = {
   .model = &gemm_perf_model,
 };
 
-extern "C" void bzero_matrix_cpu(void * buffers[], void * cl_args);
-extern "C" void bzero_matrix_cuda(void * buffers[], void * cl_args);
 starpu_codelet bzero_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { bzero_matrix_cpu },
@@ -82,8 +59,6 @@ static struct starpu_perfmodel accumulate_perf_model =
     .symbol = "accumulate_perf_model"
 };
 
-extern "C" void accumulate_matrix_cpu(void * buffers[], void * cl_args);
-extern "C" void accumulate_matrix_cuda(void * buffers[], void * cl_args);
 starpu_codelet accumulate_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { accumulate_matrix_cpu },
@@ -168,13 +143,6 @@ struct Matrix {
     unsigned int m_blocks = (A.rows + block_size - 1)/block_size;
     unsigned int k_blocks = (A.cols + block_size - 1)/block_size;
     unsigned int n_blocks = (B.cols + block_size - 1)/block_size;
-
-    /*
-    Matrix<DataType> min(m_blocks, k_blocks);
-    Matrix<DataType> max(m_blocks, k_blocks);
-    min.data_register();
-    max.data_register();
-    */
     
     starpu_data_filter m_partition {
       .filter_func = starpu_matrix_filter_block,
@@ -209,31 +177,6 @@ struct Matrix {
 #endif
     starpu_data_map_filters(C.data_handle, 2, &m_partition, &n_partition);
 
-    /*
-    starpu_data_map_filters(min.data_handle, 2, &m_partition, &k_partition_vertical);
-    starpu_data_map_filters(max.data_handle, 2, &m_partition, &k_partition_vertical);
-
-    for(int i = 0; i < m_blocks; i++) {
-      for(int k = 0; k < k_blocks; k++) {
-        starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 2, i, k);
-        starpu_data_handle_t min_sub_handle = starpu_data_get_sub_data(min.data_handle, 2, i, k);
-        starpu_data_handle_t max_sub_handle = starpu_data_get_sub_data(max.data_handle, 2, i, k);
-        int err = starpu_task_insert(&minmax_cl,
-                                     STARPU_R, A_sub_handle,
-                                     STARPU_RW, min_sub_handle,
-                                     STARPU_RW, max_sub_handle,
-                                     0);
-        if(err) { throw std::exception(); }
-      }
-    }
-    
-    starpu_data_unpartition(min.data_handle, STARPU_MAIN_RAM);
-    starpu_data_unpartition(max.data_handle, STARPU_MAIN_RAM);
-    min.data_unregister();
-    max.data_unregister();
-    (max/min).print_sci();
-    */
-
 #if TWODIM != 0
     for(int i = 0; i < m_blocks; i++) {
       for(int j = 0; j < n_blocks; j++) {
@@ -256,7 +199,6 @@ struct Matrix {
                                        0);
           if(err) { throw std::exception(); }
         }
-        //starpu_task_wait_for_all();
       }
     }
 #else
@@ -340,7 +282,7 @@ int main(int argc, char ** argv) {
   
   for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
     const int k = 1<<k_exp;
-    //cublas_perf_test(m, n, k, true, resultFile);
+    cublas_perf_test(m, n, k, true, resultFile);
   }
   
   int err = starpu_init(NULL);

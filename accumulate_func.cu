@@ -4,8 +4,9 @@
 #include <iostream>
 #include <sys/syscall.h>
 
-extern "C" void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
-  printf("ACCUM CPU\n");
+#include "accumulate_func.h"
+
+void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
   int m = STARPU_MATRIX_GET_NX(buffers[0]);
   int n = STARPU_MATRIX_GET_NY(buffers[0]);
   int ld_dst = STARPU_MATRIX_GET_LD(buffers[0]);
@@ -19,8 +20,7 @@ extern "C" void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
   }
 }
 
-extern "C" void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
-  printf("ACCUM CUDA\n");
+void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
   int m = STARPU_MATRIX_GET_NX(buffers[0]);
   int n = STARPU_MATRIX_GET_NY(buffers[0]);
   int ld_dst = STARPU_MATRIX_GET_LD(buffers[0]);
