@@ -2,7 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <fstream>
-#include "cublas_perf.h"
+#include "cublas_perf.hpp"
 
 void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
   std::cerr << "================= BEGIN CUBLAS PERF TEST ===============" << std::endl;

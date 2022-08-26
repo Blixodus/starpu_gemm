@@ -7,10 +7,10 @@
 #include <chrono>
 #include <fstream>
 
-#include "cublas_perf.h"
-#include "gemm_func.h"
-#include "bzero_func.h"
-#include "accumulate_func.h"
+#include "cublas_perf.hpp"
+#include "gemm_func.hpp"
+#include "bzero_func.hpp"
+#include "accumulate_func.hpp"
 
 #define ENABLE 1
 #define DISABLE 0

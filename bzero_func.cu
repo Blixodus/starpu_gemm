@@ -1,7 +1,7 @@
 #include <starpu.h>
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
-#include "bzero_func.h"
+#include "bzero_func.hpp"
 
 void bzero_matrix_cpu(void * buffers[], void * cl_args) {
   int m = STARPU_MATRIX_GET_NX(buffers[0]);

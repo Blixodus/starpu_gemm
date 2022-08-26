@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sys/syscall.h>
 
-#include "accumulate_func.h"
+#include "accumulate_func.hpp"
 
 void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
   int m = STARPU_MATRIX_GET_NX(buffers[0]);
