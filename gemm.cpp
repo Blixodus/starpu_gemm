@@ -14,7 +14,7 @@
 
 #define ENABLE 1
 #define DISABLE 0
-#define ENABLE_REDUX 1
+#define ENABLE_REDUX 0
 #define TWODIM 1
 
 static int enable_cpu = ENABLE;
@@ -24,16 +24,23 @@ static int can_execute(unsigned workerid, struct starpu_task * task, unsigned ni
   return enable_gpu;
 }
 
-static struct starpu_perfmodel gemm_perf_model =
+static struct starpu_perfmodel gemm_perf_model_float =
 {
     .type = STARPU_HISTORY_BASED,
-    .symbol = "gemm_perf_model"
+    .symbol = "gemm_perf_model_float"
 };
 
+static struct starpu_perfmodel gemm_perf_model_double =
+{
+    .type = STARPU_HISTORY_BASED,
+    .symbol = "gemm_perf_model_double"
+};
+
+template <typename DataType>
 starpu_codelet gemm_cl = {
   .can_execute = can_execute,
-  .cpu_funcs = { gemm_cpu_func<float> },
-  .cuda_funcs = { gemm_cuda_func<float> },
+  .cpu_funcs = { gemm_cpu_func<DataType> },
+  .cuda_funcs = { gemm_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
   .nbuffers = 3,
 #if ENABLE_REDUX != 0 && TWODIM != 0
@@ -41,32 +48,37 @@ starpu_codelet gemm_cl = {
 #else
   .modes = { STARPU_R, STARPU_R, STARPU_RW },
 #endif
-  .model = &gemm_perf_model,
+  .model = (std::is_same_v<DataType, float>)?&gemm_perf_model_float:&gemm_perf_model_double,
 };
 
+template <typename DataType>
 starpu_codelet bzero_matrix_cl = {
-  .can_execute = can_execute,
-  .cpu_funcs = { bzero_matrix_cpu<float> },
-  .cuda_funcs = { bzero_matrix_cuda<float> },
-  .cpu_funcs_name = { "bzero_matrix_cpu" },
+  .cpu_funcs = { bzero_matrix_cpu<DataType> },
+  .cuda_funcs = { bzero_matrix_cuda<DataType> },
   .nbuffers = 1,
   .modes = { STARPU_W },
 };
 
-static struct starpu_perfmodel accumulate_perf_model =
+static struct starpu_perfmodel accumulate_perf_model_float =
 {
     .type = STARPU_HISTORY_BASED,
-    .symbol = "accumulate_perf_model"
+    .symbol = "accumulate_perf_model_float"
 };
 
+static struct starpu_perfmodel accumulate_perf_model_double =
+{
+    .type = STARPU_HISTORY_BASED,
+    .symbol = "accumulate_perf_model_double"
+};
+
+template <typename DataType>
 starpu_codelet accumulate_matrix_cl = {
   .can_execute = can_execute,
-  .cpu_funcs = { accumulate_matrix_cpu<float> },
-  .cuda_funcs = { accumulate_matrix_cuda<float> },
-  .cpu_funcs_name = { "accumulate_matrix_cpu" },
+  .cpu_funcs = { accumulate_matrix_cpu<DataType> },
+  .cuda_funcs = { accumulate_matrix_cuda<DataType> },
   .nbuffers = 2,
   .modes = { starpu_data_access_mode(STARPU_RW|STARPU_COMMUTE), STARPU_R },
-  .model = &accumulate_perf_model,
+  .model = (std::is_same_v<DataType, float>)?&accumulate_perf_model_float:&accumulate_perf_model_double,
 };
 
 template <typename DataType>
@@ -165,7 +177,7 @@ struct Matrix {
     };
 
 #if ENABLE_REDUX != 0 && TWODIM != 0
-    starpu_data_set_reduction_methods(C.data_handle, &accumulate_matrix_cl, &bzero_matrix_cl);
+    starpu_data_set_reduction_methods(C.data_handle, &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
 #endif
     
 #if TWODIM != 0
@@ -184,7 +196,7 @@ struct Matrix {
           starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 2, i, k);
           starpu_data_handle_t B_sub_handle = starpu_data_get_sub_data(B.data_handle, 2, k, j);
           starpu_data_handle_t C_sub_handle = starpu_data_get_sub_data(C.data_handle, 2, i, j);
-          int err = starpu_task_insert(&gemm_cl,
+          int err = starpu_task_insert(&gemm_cl<DataType>,
                                        STARPU_VALUE, &transA, sizeof(transA),
                                        STARPU_VALUE, &transB, sizeof(transB),
                                        STARPU_VALUE, &alpha, sizeof(alpha),
@@ -207,7 +219,7 @@ struct Matrix {
         starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 1, i);
         starpu_data_handle_t B_sub_handle = starpu_data_get_sub_data(B.data_handle, 1, j);
         starpu_data_handle_t C_sub_handle = starpu_data_get_sub_data(C.data_handle, 2, i, j);
-        int err = starpu_task_insert(&gemm_cl,
+        int err = starpu_task_insert(&gemm_cl<DataType>,
                                      STARPU_VALUE, &transA, sizeof(transA),
                                      STARPU_VALUE, &transB, sizeof(transB),
                                      STARPU_VALUE, &alpha, sizeof(alpha),
@@ -233,7 +245,7 @@ private:
 void test(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
   
-  Matrix<float> A(m, k), B(k, n), C(m, n);
+  Matrix<double> A(m, k), B(k, n), C(m, n);
   
   A.fill(1);
   B.fill(1);
@@ -245,7 +257,7 @@ void test(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   
   auto start = std::chrono::high_resolution_clock::now();
   
-  Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C, block_size);
+  Matrix<double>::gemm('N', 'N', 1.0f, A, B, 1.0f, C, block_size);
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
   std::cerr << "StarPU -- Time : " << time.count() << "s\n";
@@ -267,9 +279,9 @@ int main(int argc, char ** argv) {
   }
   const int exp = atoi(argv[1]);
   const int k_min = atoi(argv[2]);
-  const int k_max = atoi(argv[3]);
+  const int k_max = std::min(atoi(argv[3]), exp);
   const int b_min = atoi(argv[4]);
-  const int b_max = atoi(argv[5]);
+  const int b_max = std::min(atoi(argv[5]), exp);
   const int m = 1<<exp;
   const int n = 1<<exp;
   
@@ -289,8 +301,25 @@ int main(int argc, char ** argv) {
   if(err) { throw std::exception(); }
   starpu_cublas_init();
   
-  //enable_cpu = DISABLE;
-  //enable_gpu = ENABLE;
+  for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
+    const int block_size = 1<<b_exp;
+    for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
+      const int k = 1<<k_exp;
+      test(m, n, k, block_size, resultFile);
+    }
+  }
+  
+  enable_gpu = DISABLE;
+  for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
+    const int block_size = 1<<b_exp;
+    for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
+      const int k = 1<<k_exp;
+      test(m, n, k, block_size, resultFile);
+    }
+  }
+  
+  enable_cpu = DISABLE;
+  enable_gpu = ENABLE;
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
     for(int k_exp = k_min; k_exp <= k_max; k_exp++) {

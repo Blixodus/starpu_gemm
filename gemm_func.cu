@@ -43,3 +43,5 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
 
 template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
 template void gemm_cuda_func<float>(void *buffers[], void *cl_args);
+template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
+template void gemm_cuda_func<double>(void *buffers[], void *cl_args);
