@@ -11,6 +11,7 @@
 #include "gemm_func.hpp"
 #include "bzero_func.hpp"
 #include "accumulate_func.hpp"
+#include "fill_func.hpp"
 
 #define ENABLE 1
 #define DISABLE 0
@@ -26,13 +27,13 @@ static int can_execute(unsigned workerid, struct starpu_task * task, unsigned ni
 
 static struct starpu_perfmodel gemm_perf_model_float =
 {
-    .type = STARPU_HISTORY_BASED,
+    .type = STARPU_REGRESSION_BASED,
     .symbol = "gemm_perf_model_float"
 };
 
 static struct starpu_perfmodel gemm_perf_model_double =
 {
-    .type = STARPU_HISTORY_BASED,
+    .type = STARPU_REGRESSION_BASED,
     .symbol = "gemm_perf_model_double"
 };
 
@@ -43,16 +44,17 @@ starpu_codelet gemm_cl = {
   .cuda_funcs = { gemm_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
   .nbuffers = 3,
-#if ENABLE_REDUX != 0 && TWODIM != 0
-  .modes = { STARPU_R, STARPU_R, STARPU_REDUX },
-#else
+  //#if ENABLE_REDUX != 0 && TWODIM != 0
+  //.modes = { STARPU_R, STARPU_R, STARPU_REDUX },
+  //#else
   .modes = { STARPU_R, STARPU_R, STARPU_RW },
-#endif
+  //#endif
   .model = (std::is_same_v<DataType, float>)?&gemm_perf_model_float:&gemm_perf_model_double,
 };
 
 template <typename DataType>
 starpu_codelet bzero_matrix_cl = {
+  .can_execute = can_execute,
   .cpu_funcs = { bzero_matrix_cpu<DataType> },
   .cuda_funcs = { bzero_matrix_cuda<DataType> },
   .nbuffers = 1,
@@ -61,13 +63,13 @@ starpu_codelet bzero_matrix_cl = {
 
 static struct starpu_perfmodel accumulate_perf_model_float =
 {
-    .type = STARPU_HISTORY_BASED,
+    .type = STARPU_REGRESSION_BASED,
     .symbol = "accumulate_perf_model_float"
 };
 
 static struct starpu_perfmodel accumulate_perf_model_double =
 {
-    .type = STARPU_HISTORY_BASED,
+    .type = STARPU_REGRESSION_BASED,
     .symbol = "accumulate_perf_model_double"
 };
 
@@ -81,118 +83,136 @@ starpu_codelet accumulate_matrix_cl = {
   .model = (std::is_same_v<DataType, float>)?&accumulate_perf_model_float:&accumulate_perf_model_double,
 };
 
+static struct starpu_perfmodel fill_perf_model_float =
+{
+    .type = STARPU_REGRESSION_BASED,
+    .symbol = "fill_perf_model_float"
+};
+
+static struct starpu_perfmodel fill_perf_model_double =
+{
+    .type = STARPU_REGRESSION_BASED,
+    .symbol = "fill_perf_model_double"
+};
+
+template <typename DataType>
+starpu_codelet fill_cl = {
+  .cpu_funcs = { fill_cpu_func<DataType> },
+  .cuda_funcs = { fill_cuda_func<DataType> },
+  .cuda_flags = { STARPU_CUDA_ASYNC },
+  .nbuffers = 1,
+  .modes = { STARPU_W },
+  .model = (std::is_same_v<DataType, float>)?&fill_perf_model_float:&fill_perf_model_double,
+};
+
 template <typename DataType>
 struct Matrix {
-  DataType * data;
   size_t rows, cols;
+  unsigned int row_blocks, col_blocks;
   starpu_data_handle_t data_handle;
 
   Matrix() = default;
   
-  Matrix(size_t rows_, size_t cols_) : rows(rows_), cols(cols_) {
-    int err = starpu_malloc((void**)&data, rows * cols * sizeof(DataType));
-    if(err) { printf("MALLOC FAILED\n"); }
+  Matrix(size_t rows_, size_t cols_) : rows(rows_), cols(cols_), row_blocks(1), col_blocks(1) {
+    starpu_matrix_data_register(&data_handle, -1, 0, rows, rows, cols, sizeof(DataType));
+  };
+  
+  Matrix(size_t rows_, size_t cols_, size_t block_size) : rows(rows_), cols(cols_), row_blocks(1), col_blocks(1) {
+    starpu_matrix_data_register(&data_handle, -1, 0, rows, rows, cols, sizeof(DataType));
+    partition(block_size);
   };
 
   ~Matrix() {
-    int err = starpu_free_noflag(data, rows * cols * sizeof(DataType));
-    if(err) { printf("FREE FAILED\n"); }
+    // Need to unpartition before unregistering ?
+    if(row_blocks > 1 || col_blocks > 1) { unpartition(); }
+    starpu_data_unregister(data_handle);
   }
 
-  DataType& operator()(size_t row, size_t col) { return elem(row, col); }
-
-  Matrix<DataType> operator/(Matrix<DataType>& other) {
-    Matrix<DataType> result(rows, cols);
-    for(int i = 0; i < cols; i++) {
-      for(int j = 0; j < rows; j++) {
-        result(j, i) = (*this)(j, i)/other(j, i);
-      }
-    }
-    return result;
-  }
+  void partition(size_t block_size) {
+    if(row_blocks > 1 || col_blocks > 1) { unpartition(); }
+    
+    row_blocks = (rows + block_size - 1)/block_size;
+    col_blocks = (cols + block_size - 1)/block_size;
+    
+    starpu_data_filter row_partition {
+      .filter_func = starpu_matrix_filter_block,
+      .nchildren = row_blocks
+    };
   
-  void fill_random() {
-    for(int i = 0; i < rows * cols; i++) { data[i] = (DataType)std::rand()/RAND_MAX; }
+    starpu_data_filter col_partition {
+      .filter_func = starpu_matrix_filter_vertical_block,
+      .nchildren = col_blocks
+    };
+    
+    starpu_data_map_filters(data_handle, 2, &row_partition, &col_partition);
   }
+
+  void unpartition() {
+    starpu_data_unpartition(data_handle, STARPU_MAIN_RAM);
+    row_blocks = 1;
+    col_blocks = 1;
+  }
+
+  //DataType& operator()(size_t row, size_t col) { return elem(row, col); }
+  
+  //void fill_random() {
+  //  for(int i = 0; i < rows * cols; i++) { data[i] = (DataType)std::rand()/RAND_MAX; }
+  //}
 
   void fill(DataType e) {
-    for(int i = 0; i < rows * cols; i++) { data[i] = e; }
-  }
-
-  void assertEq(DataType e) {
-    for(int i = 0; i < rows * cols; i++) { if(data[i] != e) { std::cout << data[i] << " " << e << std::endl; break; } }
-  }
-
-  void print_sci() {
-    for(size_t i = 0; i < rows; i++) {
-      for(size_t j = 0; j < cols; j++) {
-        std::cout << std::scientific << elem(i, j) << " ";
+    for(int i = 0; i < row_blocks; i++) {
+      for(int j = 0; j < col_blocks; j++) {
+        starpu_data_handle_t sub_handle = starpu_data_get_sub_data(data_handle, 2, i, j);
+        int err = starpu_task_insert(&fill_cl<DataType>,
+                                     STARPU_VALUE, &e, sizeof(e),
+                                     STARPU_W, sub_handle,
+                                     0);
+        if(err) { throw std::exception(); }
       }
-      std::cout << std::endl;
     }
-    std::cout << std::endl << std::defaultfloat;
   }
-
+  
+  void assertEq(DataType e) {
+    unpartition();
+    size_t nx = starpu_matrix_get_nx(data_handle);
+    size_t ny = starpu_matrix_get_ny(data_handle);
+    size_t ld = starpu_matrix_get_local_ld(data_handle);
+    DataType *mat = (DataType*)starpu_matrix_get_local_ptr(data_handle);
+    for(size_t i = 0; i < nx; i++) {
+      for(size_t j = 0; j < ny; j++) {
+        if(mat[i + j*ld] != e) {
+          std::cout << mat[i + j*ld] << " " << e << std::endl;
+          break;
+        }
+      }
+    }
+  }
+  
   void print() {
-    for(size_t i = 0; i < rows; i++) {
-      for(size_t j = 0; j < cols; j++) {
-        printf("%5.2f ", elem(i, j));
+    unpartition();
+    size_t nx = starpu_matrix_get_nx(data_handle);
+    size_t ny = starpu_matrix_get_ny(data_handle);
+    size_t ld = starpu_matrix_get_local_ld(data_handle);
+    DataType *mat = (DataType*)starpu_matrix_get_local_ptr(data_handle);
+    for(size_t i = 0; i < nx; i++) {
+      for(size_t j = 0; j < ny; j++) {
+        printf("%5.2f ", mat[i + j*ld]);
       }
       std::cout << std::endl;
     }
     std::cout << std::endl;
   }
-
-  void data_register() {
-    starpu_matrix_data_register(&data_handle, STARPU_MAIN_RAM, (uintptr_t)&data[0], rows, rows, cols, sizeof(data[0]));
-  }
-
-  void data_unregister() {
-    starpu_data_unregister(data_handle);
-  }
-
-  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType>& A, Matrix<DataType>& B, DataType beta, Matrix<DataType>& C, int block_size) {
-    unsigned int m_blocks = (A.rows + block_size - 1)/block_size;
-    unsigned int k_blocks = (A.cols + block_size - 1)/block_size;
-    unsigned int n_blocks = (B.cols + block_size - 1)/block_size;
-    
-    starpu_data_filter m_partition {
-      .filter_func = starpu_matrix_filter_block,
-      .nchildren = m_blocks
-    };
-
-    starpu_data_filter k_partition_vertical {
-      .filter_func = starpu_matrix_filter_vertical_block,
-      .nchildren = k_blocks
-    };
-
-    starpu_data_filter k_partition_horizontal {
-      .filter_func = starpu_matrix_filter_block,
-      .nchildren = k_blocks
-    };
   
-    starpu_data_filter n_partition {
-      .filter_func = starpu_matrix_filter_vertical_block,
-      .nchildren = n_blocks
-    };
-
-#if ENABLE_REDUX != 0 && TWODIM != 0
-    starpu_data_set_reduction_methods(C.data_handle, &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
-#endif
-    
-#if TWODIM != 0
-    starpu_data_map_filters(A.data_handle, 2, &m_partition, &k_partition_vertical);
-    starpu_data_map_filters(B.data_handle, 2, &k_partition_horizontal, &n_partition);
-#else
-    starpu_data_partition(A.data_handle, &m_partition);
-    starpu_data_partition(B.data_handle, &n_partition);
-#endif
-    starpu_data_map_filters(C.data_handle, 2, &m_partition, &n_partition);
-
-#if TWODIM != 0
-    for(int i = 0; i < m_blocks; i++) {
-      for(int j = 0; j < n_blocks; j++) {
-        for(int k = 0; k < k_blocks; k++) {
+  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType>& A, Matrix<DataType>& B, DataType beta, Matrix<DataType>& C) {
+    assert(A.rows == C.rows);
+    assert(B.cols == C.cols);
+    assert(A.cols == B.rows);
+    assert(A.row_blocks == C.row_blocks);
+    assert(B.col_blocks == C.col_blocks);
+    assert(A.col_blocks == B.row_blocks);
+    for(int i = 0; i < C.row_blocks; i++) {
+      for(int j = 0; j < C.col_blocks; j++) {
+        for(int k = 0; k < A.col_blocks; k++) {
           starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 2, i, k);
           starpu_data_handle_t B_sub_handle = starpu_data_get_sub_data(B.data_handle, 2, k, j);
           starpu_data_handle_t C_sub_handle = starpu_data_get_sub_data(C.data_handle, 2, i, j);
@@ -203,71 +223,38 @@ struct Matrix {
                                        STARPU_VALUE, &beta, sizeof(beta),
                                        STARPU_R, A_sub_handle,
                                        STARPU_R, B_sub_handle,
-#if ENABLE_REDUX != 0
-                                       STARPU_REDUX, C_sub_handle,
-#else
                                        STARPU_RW, C_sub_handle,
-#endif
+                                       STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
                                        0);
           if(err) { throw std::exception(); }
         }
       }
     }
-#else
-    for(int i = 0; i < m_blocks; i++) {
-      for(int j = 0; j < n_blocks; j++) {
-        starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 1, i);
-        starpu_data_handle_t B_sub_handle = starpu_data_get_sub_data(B.data_handle, 1, j);
-        starpu_data_handle_t C_sub_handle = starpu_data_get_sub_data(C.data_handle, 2, i, j);
-        int err = starpu_task_insert(&gemm_cl<DataType>,
-                                     STARPU_VALUE, &transA, sizeof(transA),
-                                     STARPU_VALUE, &transB, sizeof(transB),
-                                     STARPU_VALUE, &alpha, sizeof(alpha),
-                                     STARPU_VALUE, &beta, sizeof(beta),
-                                     STARPU_R, A_sub_handle,
-                                     STARPU_R, B_sub_handle,
-                                     STARPU_RW, C_sub_handle,
-                                     0);
-        if(err) { throw std::exception(); }
-      }
-    }
-#endif
-    
-    starpu_data_unpartition(A.data_handle, STARPU_MAIN_RAM);
-    starpu_data_unpartition(B.data_handle, STARPU_MAIN_RAM);
-    starpu_data_unpartition(C.data_handle, STARPU_MAIN_RAM);
   }
 
-private:
-  DataType& elem(size_t row, size_t col) { return data[row + col * rows]; }
+//private:
+  //DataType& elem(size_t row, size_t col) { return data[row + col * rows]; }
 };
 
 void test(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
   
-  Matrix<double> A(m, k), B(k, n), C(m, n);
+  Matrix<float> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
   
   A.fill(1);
   B.fill(1);
   C.fill(0);
   
-  A.data_register();
-  B.data_register();
-  C.data_register();
-  
   auto start = std::chrono::high_resolution_clock::now();
   
-  Matrix<double>::gemm('N', 'N', 1.0f, A, B, 1.0f, C, block_size);
+  Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+  starpu_task_wait_for_all();
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
   std::cerr << "StarPU -- Time : " << time.count() << "s\n";
   std::cerr << "StarPU -- Performance : " << 2L * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
   
   resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
-  
-  A.data_unregister();
-  B.data_unregister();
-  C.data_unregister();
 
   C.assertEq(k);
 }
@@ -300,7 +287,13 @@ int main(int argc, char ** argv) {
   int err = starpu_init(NULL);
   if(err) { throw std::exception(); }
   starpu_cublas_init();
+
+  //int w_scope = starpu_perf_knob_scope_name_to_id("per_worker");
+  //int w_enable_id = starpu_perf_knob_name_to_id((starpu_perf_knob_scope)w_scope, "starpu.worker.w_enable_worker_knob");
+  //int32_t val = starpu_perf_knob_get_per_worker_int32_value(w_enable_id, 5);
+  //starpu_perf_knob_set_per_worker_int32_value(w_enable_id, 5, 0);
   
+  //enable_cpu = DISABLE;
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
     for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
@@ -309,6 +302,7 @@ int main(int argc, char ** argv) {
     }
   }
   
+  /*
   enable_gpu = DISABLE;
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
@@ -327,7 +321,7 @@ int main(int argc, char ** argv) {
       test(m, n, k, block_size, resultFile);
     }
   }
-  
+  */
   starpu_cublas_shutdown();
   starpu_shutdown();
 

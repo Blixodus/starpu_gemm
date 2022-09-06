@@ -3,12 +3,14 @@
 #include "cublas_v2.h"
 #include <exception>
 #include <iostream>
+#include <cassert>
 
 #include "gemm_func.hpp"
 #include "blas.hpp"
 
 template <typename DataType>
 void gemm_cpu_func(void * buffers[], void * cl_args) {
+  std::cerr << "GEMM CPU\n";
   char transA, transB;
   DataType alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -26,6 +28,7 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
 
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
+  std::cerr << "GEMM CUDA\n";
   char transA, transB;
   DataType alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -39,6 +42,7 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
   int ld_C = STARPU_MATRIX_GET_LD(buffers[2]);
   DataType * C = (DataType*)STARPU_MATRIX_GET_PTR(buffers[2]);
   cublasgemm(starpu_cublas_get_local_handle(), convertToCublas(transA), convertToCublas(transB), m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
+  cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
 template void gemm_cpu_func<float>(void *buffers[], void *cl_args);

@@ -9,6 +9,7 @@
 
 template <typename DataType>
 void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
+  //std::cout << "ACCUM CPU" << std::endl;
   int m = STARPU_MATRIX_GET_NX(buffers[0]);
   int n = STARPU_MATRIX_GET_NY(buffers[0]);
   int ld_dst = STARPU_MATRIX_GET_LD(buffers[0]);
@@ -24,6 +25,7 @@ void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
 
 template <typename DataType>
 void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
+  //std::cout << "ACCUM CUDA" << std::endl;
   int m = STARPU_MATRIX_GET_NX(buffers[0]);
   int n = STARPU_MATRIX_GET_NY(buffers[0]);
   int ld_dst = STARPU_MATRIX_GET_LD(buffers[0]);
