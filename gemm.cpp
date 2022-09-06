@@ -7,7 +7,7 @@
 #include <chrono>
 #include <fstream>
 
-#include "cublas_perf.hpp"
+//#include "cublas_perf.hpp"
 #include "gemm_func.hpp"
 #include "bzero_func.hpp"
 #include "accumulate_func.hpp"
@@ -285,10 +285,10 @@ int main(int argc, char ** argv) {
   resultFile.open(buffer);
   resultFile << "CPU;GPU;M;N;K;BLOCK;TFLOPS" << std::endl;
   
-  for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
-    const int k = 1<<k_exp;
-    cublas_perf_test(m, n, k, true, resultFile);
-  }
+  //for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
+  //  const int k = 1<<k_exp;
+  //  cublas_perf_test(m, n, k, true, resultFile);
+  //}
   
   int err = starpu_init(NULL);
   if(err) { throw std::exception(); }
