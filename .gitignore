@@ -2,6 +2,10 @@ gemm
 results
 figures
 
+# StarPU data and trace files
+*.gp
+*.data
+
 # Prerequisites
 *.d
 
