@@ -182,10 +182,11 @@ struct Matrix {
       for(size_t j = 0; j < ny; j++) {
         if(mat[i + j*ld] != e) {
           std::cout << mat[i + j*ld] << " " << e << std::endl;
-          break;
+          goto end;
         }
       }
     }
+  end:
   }
   
   void print() {
