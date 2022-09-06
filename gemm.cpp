@@ -187,6 +187,7 @@ struct Matrix {
       }
     }
   end:
+    return;
   }
   
   void print() {
