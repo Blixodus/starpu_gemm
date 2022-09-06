@@ -1,16 +1,9 @@
 #include <starpu.h>
+#ifdef STARPU_USE_CUDA
 #include <cuda.h>
+#endif
 #include <iostream>
 #include "fill_func.hpp"
-
-template <typename DataType>
-__global__ void fill_kernel(DataType *mat, int rows, int cols, int ld, DataType val) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  int j = blockIdx.y * blockDim.y + threadIdx.y;
-  if(i < rows && j < cols) {
-    mat[j*ld + i] = val;
-  }
-}
 
 template <typename DataType>
 void fill_cpu_func(void * buffers[], void * cl_args) {
@@ -28,6 +21,19 @@ void fill_cpu_func(void * buffers[], void * cl_args) {
   }
 }
 
+template void fill_cpu_func<float>(void * buffers[], void * cl_args);
+template void fill_cpu_func<double>(void * buffers[], void * cl_args);
+
+#ifdef STARPU_USE_CUDA
+template <typename DataType>
+__global__ void fill_kernel(DataType *mat, int rows, int cols, int ld, DataType val) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int j = blockIdx.y * blockDim.y + threadIdx.y;
+  if(i < rows && j < cols) {
+    mat[j*ld + i] = val;
+  }
+}
+
 template <typename DataType>
 void fill_cuda_func(void * buffers[], void * cl_args) {
   std::cerr << "FILL CUDA\n";
@@ -42,7 +48,6 @@ void fill_cuda_func(void * buffers[], void * cl_args) {
   fill_kernel<<<numBlocks, threadsPerBlock>>>(mat, rows, cols, ld, e);
 }
 
-template void fill_cpu_func<float>(void * buffers[], void * cl_args);
 template void fill_cuda_func<float>(void * buffers[], void * cl_args);
-template void fill_cpu_func<double>(void * buffers[], void * cl_args);
 template void fill_cuda_func<double>(void * buffers[], void * cl_args);
+#endif

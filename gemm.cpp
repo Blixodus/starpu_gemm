@@ -41,14 +41,12 @@ template <typename DataType>
 starpu_codelet gemm_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { gemm_cpu_func<DataType> },
+#ifdef STARPU_USE_CUDA
   .cuda_funcs = { gemm_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
   .nbuffers = 3,
-  //#if ENABLE_REDUX != 0 && TWODIM != 0
-  //.modes = { STARPU_R, STARPU_R, STARPU_REDUX },
-  //#else
   .modes = { STARPU_R, STARPU_R, STARPU_RW },
-  //#endif
   .model = (std::is_same_v<DataType, float>)?&gemm_perf_model_float:&gemm_perf_model_double,
 };
 
@@ -56,7 +54,9 @@ template <typename DataType>
 starpu_codelet bzero_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { bzero_matrix_cpu<DataType> },
+#ifdef STARPU_USE_CUDA
   .cuda_funcs = { bzero_matrix_cuda<DataType> },
+#endif
   .nbuffers = 1,
   .modes = { STARPU_W },
 };
@@ -77,7 +77,9 @@ template <typename DataType>
 starpu_codelet accumulate_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { accumulate_matrix_cpu<DataType> },
+#ifdef STARPU_USE_CUDA
   .cuda_funcs = { accumulate_matrix_cuda<DataType> },
+#endif
   .nbuffers = 2,
   .modes = { starpu_data_access_mode(STARPU_RW|STARPU_COMMUTE), STARPU_R },
   .model = (std::is_same_v<DataType, float>)?&accumulate_perf_model_float:&accumulate_perf_model_double,
@@ -98,8 +100,10 @@ static struct starpu_perfmodel fill_perf_model_double =
 template <typename DataType>
 starpu_codelet fill_cl = {
   .cpu_funcs = { fill_cpu_func<DataType> },
+#ifdef STARPU_USE_CUDA
   .cuda_funcs = { fill_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
   .nbuffers = 1,
   .modes = { STARPU_W },
   .model = (std::is_same_v<DataType, float>)?&fill_perf_model_float:&fill_perf_model_double,
@@ -290,12 +294,6 @@ int main(int argc, char ** argv) {
   if(err) { throw std::exception(); }
   starpu_cublas_init();
 
-  //int w_scope = starpu_perf_knob_scope_name_to_id("per_worker");
-  //int w_enable_id = starpu_perf_knob_name_to_id((starpu_perf_knob_scope)w_scope, "starpu.worker.w_enable_worker_knob");
-  //int32_t val = starpu_perf_knob_get_per_worker_int32_value(w_enable_id, 5);
-  //starpu_perf_knob_set_per_worker_int32_value(w_enable_id, 5, 0);
-  
-  //enable_cpu = DISABLE;
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
     for(int k_exp = k_min; k_exp <= k_max; k_exp++) {

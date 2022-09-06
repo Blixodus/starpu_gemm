@@ -1,8 +1,9 @@
 #include <starpu.h>
+#ifdef STARPU_USE_CUDA
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
+#endif
 #include <iostream>
-#include <sys/syscall.h>
 
 #include "accumulate_func.hpp"
 #include "blas.hpp"
@@ -23,6 +24,10 @@ void accumulate_matrix_cpu(void * buffers[], void * cl_args) {
   }
 }
 
+template void accumulate_matrix_cpu<float>(void * buffers[], void * cl_args);
+template void accumulate_matrix_cpu<double>(void * buffers[], void * cl_args);
+
+#ifdef STARPU_USE_CUDA
 template <typename DataType>
 void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
   //std::cout << "ACCUM CUDA" << std::endl;
@@ -36,7 +41,6 @@ void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
   cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
-template void accumulate_matrix_cpu<float>(void * buffers[], void * cl_args);
 template void accumulate_matrix_cuda<float>(void * buffers[], void * cl_args);
-template void accumulate_matrix_cpu<double>(void * buffers[], void * cl_args);
 template void accumulate_matrix_cuda<double>(void * buffers[], void * cl_args);
+#endif

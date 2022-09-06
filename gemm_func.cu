@@ -1,6 +1,8 @@
 #include <starpu.h>
+#ifdef STARPU_USE_CUDA
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
+#endif
 #include <exception>
 #include <iostream>
 #include <cassert>
@@ -26,6 +28,10 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
   gemm(transA, transB, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
 }
 
+template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
+template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
+
+#ifdef STARPU_USE_CUDA
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
   std::cerr << "GEMM CUDA\n";
@@ -45,7 +51,6 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
   cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
-template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
 template void gemm_cuda_func<float>(void *buffers[], void *cl_args);
-template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
 template void gemm_cuda_func<double>(void *buffers[], void *cl_args);
+#endif
