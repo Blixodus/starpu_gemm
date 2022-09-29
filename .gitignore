@@ -1,6 +1,7 @@
 gemm
 results
 figures
+build
 
 # StarPU data and trace files
 *.gp
