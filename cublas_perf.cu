@@ -1,13 +1,10 @@
-#ifdef __CUDACC__
 #include "cublas_v2.h"
-#endif
 #include <iostream>
 #include <chrono>
 #include <fstream>
 #include "cublas_perf.hpp"
 
 void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
-#ifdef _CUDACC__
   std::cerr << "================= BEGIN CUBLAS PERF TEST ===============" << std::endl;
   
   cudaError_t cudaStat;
@@ -101,5 +98,4 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
   cudaFreeHost(h_C);
 
   std::cerr << "================= END CUBLAS PERF TEST ===============" << std::endl;
-#endif
 }

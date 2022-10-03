@@ -12,9 +12,7 @@
 #define ENABLE_REDUX 1
 #define TWODIM 1
 
-#ifdef __CUDACC__
 #include "cublas_perf.hpp"
-#endif
 #include "gemm_func.hpp"
 #include "bzero_func.hpp"
 #include "accumulate_func.hpp"
@@ -41,7 +39,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   
   resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
-  C.assertEq(k);
+  //C.assertEq(k);
 }
 
 int main(int argc, char ** argv) {
@@ -64,14 +62,10 @@ int main(int argc, char ** argv) {
   resultFile.open(buffer);
   resultFile << "CPU;GPU;M;N;K;BLOCK;TFLOPS" << std::endl;
 
-  /*
-#ifdef __CUDACC__
   for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
     const int k = 1<<k_exp;
     cublas_perf_test(m, n, k, true, resultFile);
   }
-#endif
-  */
 
   int err = starpu_init(NULL);
   if(err) { throw std::exception(); }

@@ -28,7 +28,7 @@ starpu_codelet gemm_cl = {
 #endif
   .nbuffers = 3,
 #if ENABLE_REDUX != 0
-  .modes = { STARPU_R, STARPU_R, STARPU_REDUX },
+  .modes = { STARPU_R, STARPU_R, starpu_data_access_mode(STARPU_RW|STARPU_COMMUTE) },
 #else
   .modes = { STARPU_R, STARPU_R, STARPU_RW },
 #endif
@@ -99,6 +99,7 @@ struct Matrix {
   size_t rows, cols;
   unsigned int row_blocks, col_blocks;
   starpu_data_handle_t data_handle;
+  bool isPartitioned = false;
 
   Matrix() = default;
   
@@ -113,7 +114,7 @@ struct Matrix {
 
   ~Matrix() {
     // Need to unpartition before unregistering ?
-    if(row_blocks > 1 || col_blocks > 1) { unpartition(); }
+    if(isPartitioned) { unpartition(); }
     starpu_data_unregister(data_handle);
   }
 
@@ -122,7 +123,7 @@ struct Matrix {
     starpu_data_set_reduction_methods(data_handle, &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
 #endif
     
-    if(row_blocks > 1 || col_blocks > 1) { unpartition(); }
+    if(isPartitioned) { unpartition(); }
     
     row_blocks = (rows + block_size - 1)/block_size;
     col_blocks = (cols + block_size - 1)/block_size;
@@ -138,12 +139,14 @@ struct Matrix {
     };
     
     starpu_data_map_filters(data_handle, 2, &row_partition, &col_partition);
+    isPartitioned = true;
   }
 
   void unpartition() {
     starpu_data_unpartition(data_handle, STARPU_MAIN_RAM);
     row_blocks = 1;
     col_blocks = 1;
+    isPartitioned = false;
   }
 
   //DataType& operator()(size_t row, size_t col) { return elem(row, col); }
@@ -220,7 +223,7 @@ struct Matrix {
                                        STARPU_R, A_sub_handle,
                                        STARPU_R, B_sub_handle,
 #if ENABLE_REDUX != 0
-                                       STARPU_REDUX, C_sub_handle,
+                                       STARPU_MPI_REDUX, C_sub_handle,
 #else
                                        STARPU_RW, C_sub_handle,
 #endif
