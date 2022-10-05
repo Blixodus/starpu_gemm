@@ -1,5 +1,5 @@
 #include <starpu.h>
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 #include <cuda.h>
 #endif
 #include <iostream>
@@ -24,7 +24,7 @@ void fill_cpu_func(void * buffers[], void * cl_args) {
 template void fill_cpu_func<float>(void * buffers[], void * cl_args);
 template void fill_cpu_func<double>(void * buffers[], void * cl_args);
 
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 template <typename DataType>
 __global__ void fill_kernel(DataType *mat, int rows, int cols, int ld, DataType val) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;

@@ -43,6 +43,10 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
 }
 
 int main(int argc, char ** argv) {
+#ifdef USE_CUDA
+  std::cout << "Defined" << std::endl;
+#endif
+  
   if(argc != 6) {
     std::cerr << "Usage : " << argv[0] << " [exp] [k_min] [k_max] [bs_min] [bs_max]" << std::endl;
     return 1;
@@ -62,15 +66,19 @@ int main(int argc, char ** argv) {
   resultFile.open(buffer);
   resultFile << "CPU;GPU;M;N;K;BLOCK;TFLOPS" << std::endl;
 
+#ifdef USE_CUDA
   for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
     const int k = 1<<k_exp;
     cublas_perf_test(m, n, k, true, resultFile);
   }
+#endif
 
   int err = starpu_init(NULL);
   if(err) { throw std::exception(); }
+#ifdef USE_CUDA
   starpu_cublas_init();
-
+#endif
+  
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
     for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
@@ -79,7 +87,9 @@ int main(int argc, char ** argv) {
     }
   }
   
+#ifdef USE_CUDA
   starpu_cublas_shutdown();
+#endif
   starpu_shutdown();
 
   resultFile.close();

@@ -1,5 +1,5 @@
 #include <starpu.h>
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #endif
@@ -23,7 +23,7 @@ void bzero_matrix_cpu(void * buffers[], void * cl_args) {
 template void bzero_matrix_cpu<float>(void * buffers[], void * cl_args);
 template void bzero_matrix_cpu<double>(void * buffers[], void * cl_args);
 
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 template <typename DataType>
 void bzero_matrix_cuda(void * buffers[], void * cl_args) {
   //std::cout << "BZERO CUDA" << std::endl;

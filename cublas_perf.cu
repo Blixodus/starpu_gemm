@@ -1,9 +1,12 @@
+#ifdef USE_CUDA
 #include "cublas_v2.h"
+#endif
 #include <iostream>
 #include <chrono>
 #include <fstream>
 #include "cublas_perf.hpp"
 
+#ifdef USE_CUDA
 void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
   std::cerr << "================= BEGIN CUBLAS PERF TEST ===============" << std::endl;
   
@@ -99,3 +102,4 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
 
   std::cerr << "================= END CUBLAS PERF TEST ===============" << std::endl;
 }
+#endif

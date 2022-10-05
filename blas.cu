@@ -1,5 +1,5 @@
 #include <starpu.h>
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #endif
@@ -24,7 +24,7 @@ void gemm(char transA, char transB, int m, int n, int k, DataType alpha, DataTyp
 template void gemm<float>(char transA, char transB, int m, int n, int k, float alpha, float * A, int lda, float * B, int ldb, float beta, float * C, int ldc);
 template void gemm<double>(char transA, char transB, int m, int n, int k, double alpha, double * A, int lda, double * B, int ldb, double beta, double * C, int ldc);
 
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 cublasOperation_t convertToCublas(char trans) {
   switch(trans) {
   case 'N':

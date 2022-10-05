@@ -4,7 +4,7 @@
 template <typename DataType>
 void gemm(char transA, char transB, int m, int n, int k, DataType alpha, DataType * A, int lda, DataType * B, int ldb, DataType beta, DataType * C, int ldc);
 
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 cublasOperation_t convertToCublas(char trans);
 
 template <typename DataType>

@@ -1,5 +1,5 @@
 #include <starpu.h>
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #endif
@@ -31,7 +31,7 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
 template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
 template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
 
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
   std::cerr << "GEMM CUDA\n";

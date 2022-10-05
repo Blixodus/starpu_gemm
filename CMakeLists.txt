@@ -14,6 +14,11 @@ else (STARPU_FOUND)
     message(FATAL_ERROR "StarPU not found")
 endif()
 
+option(gemm_USE_CUDA "Build with CUDA" ON)
+if(gemm_USE_CUDA)
+    add_definitions(-DUSE_CUDA)
+endif()
+
 add_library(lib STATIC
     blas.cu blas.hpp
     gemm_func.cu gemm_func.hpp

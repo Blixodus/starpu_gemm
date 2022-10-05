@@ -22,7 +22,7 @@ template <typename DataType>
 starpu_codelet gemm_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { gemm_cpu_func<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   .cuda_funcs = { gemm_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
@@ -39,7 +39,7 @@ template <typename DataType>
 starpu_codelet bzero_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { bzero_matrix_cpu<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   .cuda_funcs = { bzero_matrix_cuda<DataType> },
 #endif
   .nbuffers = 1,
@@ -62,7 +62,7 @@ template <typename DataType>
 starpu_codelet accumulate_matrix_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { accumulate_matrix_cpu<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   .cuda_funcs = { accumulate_matrix_cuda<DataType> },
 #endif
   .nbuffers = 2,
@@ -85,7 +85,7 @@ static struct starpu_perfmodel fill_perf_model_double =
 template <typename DataType>
 starpu_codelet fill_cl = {
   .cpu_funcs = { fill_cpu_func<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   .cuda_funcs = { fill_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
