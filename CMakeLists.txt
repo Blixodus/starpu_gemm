@@ -83,13 +83,15 @@ endif()
 # ---------------------------------------------
 
 # Option to enable/disable the MPI compilation
-option( ENABLE_MPI "Define if MPI support should be enabled" OFF )
+option( ENABLE_MPI "Define if MPI support should be enabled" ON )
 
 # Option to enable/disable the StarPU package
 option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
 
 # Option to enable/disable CUDA support
-option( ENABLE_CUDA "Define if CUDA support is enabled or not" ON )
+option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
+
+option( gemm_USE_CUDA "Build with CUDA" OFF )
 
 # Generate the config file that holds the define of the lib
 # ---------------------------------------------------------
@@ -108,9 +110,22 @@ endif()
 # Search for StarPU
 if( ENABLE_STARPU )
   # Specify the minimum version
-  set( STARPU_REQUIRED_VERSION "1.3" CACHE STRING "oldest STARPU version desired" )
-
+  set( STARPU_REQUIRED_VERSION "1.3" CACHE STRING "more recent STARPU version required" )
   find_package( STARPU ${STARPU_REQUIRED_VERSION} REQUIRED )
+  morse_cmake_required_set( STARPU )
+  check_c_source_compiles("
+#include <starpu.h>
+int main(void) {
+  enum starpu_data_access_mode access = STARPU_MPI_REDUX;
+  return 0;
+}
+"
+    HAVE_STARPU_MPI_REDUX
+  )
+  if ( HAVE_STARPU_MPI_REDUX )
+    message("-- ${Blue}Add definition HAVE_STARPU_MPI_REDUX${ColourReset}")
+    add_compile_definitions(HAVE_STARPU_MPI_REDUX)
+  endif()
 endif()
 
 # Search for OpenMP
@@ -129,7 +144,6 @@ find_package(LAPACKE REQUIRED)
 
 # USE_CUDA
 # --------
-option(gemm_USE_CUDA "Build with CUDA" ON)
 if(gemm_USE_CUDA)
   add_definitions(-DUSE_CUDA)
   enable_language(CUDA)

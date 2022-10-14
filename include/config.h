@@ -4,6 +4,7 @@
 #cmakedefine ENABLE_MPI
 #cmakedefine ENABLE_STARPU
 #cmakedefine ENABLE_CUDA
+#cmakedefine ENABLE_REDUX
 
 #if defined(ENABLE_MPI)
 #include <mpi.h>
