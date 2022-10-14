@@ -14,7 +14,7 @@ else (STARPU_FOUND)
     message(FATAL_ERROR "StarPU not found")
 endif()
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(gemm_USE_CUDA "Build with CUDA" ON)
