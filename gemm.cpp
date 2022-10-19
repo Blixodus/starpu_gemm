@@ -1,4 +1,5 @@
 #include <starpu.h>
+#include <starpu_mpi.h>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -24,10 +25,11 @@
 #include "fill_func.hpp"
 #include "matrix.hpp"
 
+/*
 void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
   
-  Matrix<float> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
+  Matrix<float> A(m, k), B(k, n), C(m, n);
   
   A.fill(1);
   B.fill(1);
@@ -46,12 +48,45 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
 
   //C.assertEq(k);
 }
+*/
+
+void test(int m, int n, int k) {
+  Matrix<float, 16, 16> A(m, k), B(k, n), C(m, n);
+  
+  A.fill(1);
+  B.fill(1);
+  C.fill(0);
+  
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  Matrix<float, 16, 16>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+  starpu_task_wait_for_all();
+  
+  std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
+  std::cerr << "StarPU -- Time : " << time.count() << "s\n";
+  std::cerr << "StarPU -- Performance : " << 2L * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
+
+  //C.assertEq(k);
+}
 
 int main(int argc, char ** argv) {
+  int err = starpu_init(NULL);
+  if(err) { throw std::exception(); }
+  err = starpu_mpi_init(&argc, &argv, 1);
+  if(err) { throw std::exception(); }
 #ifdef USE_CUDA
-  std::cout << "Defined" << std::endl;
+  starpu_cublas_init();
 #endif
   
+  test(1024, 1024, 1024);
+  
+#ifdef USE_CUDA
+  starpu_cublas_shutdown();
+#endif
+  starpu_mpi_shutdown();
+  starpu_shutdown();
+  
+  /*
   if(argc != 6) {
     std::cerr << "Usage : " << argv[0] << " [exp] [k_min] [k_max] [bs_min] [bs_max]" << std::endl;
     return 1;
@@ -99,5 +134,6 @@ int main(int argc, char ** argv) {
 
   resultFile.close();
   std::cout << buffer << std::endl;
+  */
   return 0;
 }

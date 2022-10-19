@@ -1,21 +1,8 @@
 cmake_minimum_required (VERSION 3.3)
-project(gemm) # LANGUAGES C CXX
+project(gemm LANGUAGES CXX) # LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-## # Disable in source directory build
-## set( CMAKE_DISABLE_IN_SOURCE_BUILD ON )
-## 
-## # use, i.e. don't skip the full RPATH for the build tree
-## set( CMAKE_SKIP_BUILD_RPATH FALSE )
-## 
-## # when building, don't use the install RPATH already
-## # (but later on when installing)
-## set( CMAKE_BUILD_WITH_INSTALL_RPATH FALSE )
-## 
-## option(BUILD_SHARED_LIBS
-##   "Build shared libraries" ON)
 
 # Check that we do no try to configure/build inside the source directory
 # ----------------------------------------------------------------------
@@ -91,8 +78,6 @@ option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
 # Option to enable/disable CUDA support
 option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
 
-option( gemm_USE_CUDA "Build with CUDA" OFF )
-
 # Generate the config file that holds the define of the lib
 # ---------------------------------------------------------
 # configure_file (
@@ -144,7 +129,7 @@ find_package(LAPACKE REQUIRED)
 
 # USE_CUDA
 # --------
-if(gemm_USE_CUDA)
+if(ENABLE_CUDA)
   add_definitions(-DUSE_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit)
@@ -162,20 +147,15 @@ set( gemmlib_srcs
   cublas_perf.cpp
 )
 
-add_library( gemmlib
-  ${gemmlib_srcs}
-)
-
-target_link_libraries( gemmlib PUBLIC OpenMP::OpenMP_C )
+add_library( gemmlib ${gemmlib_srcs} )
 
 if(ENABLE_MPI)
-  target_link_libraries( gemmlib PUBLIC MPI::MPI_C )
+  target_link_libraries( gemmlib PUBLIC MPI::MPI_CXX )
 endif()
-
 if(ENABLE_STARPU)
   target_link_libraries( gemmlib PRIVATE MORSE::STARPU )
 endif()
-
+target_link_libraries( gemmlib PUBLIC OpenMP::OpenMP_CXX )
 target_link_libraries( gemmlib PUBLIC MORSE::LAPACKE )
 target_link_libraries( gemmlib PUBLIC MORSE::CBLAS   )
 target_link_libraries( gemmlib PUBLIC MORSE::M       )
@@ -190,13 +170,11 @@ install(TARGETS gemmlib
 add_executable(gemm gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
 
-if(gemm_UDE_CUDA)
+if(ENABLE_CUDA)
   target_link_libraries(gemm PRIVATE CUDA::cublas)
 endif()
-
-
 if (ENABLE_MPI)
-  target_link_libraries( gemm PUBLIC MPI::MPI_C )
+  target_link_libraries(gemm PUBLIC MPI::MPI_CXX)
 endif (ENABLE_MPI)
 if (ENABLE_STARPU)
   target_link_libraries(gemm PUBLIC MORSE::STARPU)

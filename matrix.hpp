@@ -94,60 +94,42 @@ starpu_codelet fill_cl = {
   .model = (std::is_same_v<DataType, float>)?&fill_perf_model_float:&fill_perf_model_double,
 };
 
-template <typename DataType>
+static int mpi_tag = 0;
+
+template <typename DataType, size_t rows, size_t cols>
+struct MatrixData {
+  starpu_data_handle_t data_handle[rows * cols];
+
+  MatrixData(size_t mat_rows, size_t mat_cols) {
+    int rank, size;
+    starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
+    starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
+    for(size_t i = 0; i < rows * cols; i++) {
+      starpu_matrix_data_register(&data_handle[i], -1, 0, mat_rows, mat_rows, mat_cols, sizeof(DataType));
+      starpu_mpi_data_register(data_handle[i], mpi_tag++, i%size);
+    }
+  }
+
+  ~MatrixData() {
+    for(size_t i = 0; i < rows * cols; i++) {
+      starpu_data_unregister(data_handle[i]);
+    }
+  }
+
+  starpu_data_handle_t get(int i, int j) {
+    return data_handle[i + j * rows];
+  }
+};
+
+template <typename DataType, size_t row_blocks, size_t col_blocks>
 struct Matrix {
   size_t rows, cols;
-  unsigned int row_blocks, col_blocks;
-  starpu_data_handle_t data_handle;
-  bool isPartitioned = false;
+  size_t row_b = row_blocks, col_b = col_blocks;
+  MatrixData<DataType, row_blocks, col_blocks> data_handle;
 
   Matrix() = default;
   
-  Matrix(size_t rows_, size_t cols_) : rows(rows_), cols(cols_), row_blocks(1), col_blocks(1) {
-    starpu_matrix_data_register(&data_handle, -1, 0, rows, rows, cols, sizeof(DataType));
-  };
-  
-  Matrix(size_t rows_, size_t cols_, size_t block_size) : rows(rows_), cols(cols_), row_blocks(1), col_blocks(1) {
-    starpu_matrix_data_register(&data_handle, -1, 0, rows, rows, cols, sizeof(DataType));
-    partition(block_size);
-  };
-
-  ~Matrix() {
-    // Need to unpartition before unregistering ?
-    if(isPartitioned) { unpartition(); }
-    starpu_data_unregister(data_handle);
-  }
-
-  void partition(size_t block_size) {
-#if ENABLE_REDUX != 0
-    starpu_data_set_reduction_methods(data_handle, &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
-#endif
-    
-    if(isPartitioned) { unpartition(); }
-    
-    row_blocks = (rows + block_size - 1)/block_size;
-    col_blocks = (cols + block_size - 1)/block_size;
-    
-    starpu_data_filter row_partition {
-      .filter_func = starpu_matrix_filter_block,
-      .nchildren = row_blocks
-    };
-  
-    starpu_data_filter col_partition {
-      .filter_func = starpu_matrix_filter_vertical_block,
-      .nchildren = col_blocks
-    };
-    
-    starpu_data_map_filters(data_handle, 2, &row_partition, &col_partition);
-    isPartitioned = true;
-  }
-
-  void unpartition() {
-    starpu_data_unpartition(data_handle, STARPU_MAIN_RAM);
-    row_blocks = 1;
-    col_blocks = 1;
-    isPartitioned = false;
-  }
+  Matrix(size_t rows_, size_t cols_) : data_handle(rows_, cols_) { };
 
   //DataType& operator()(size_t row, size_t col) { return elem(row, col); }
   
@@ -158,16 +140,17 @@ struct Matrix {
   void fill(DataType e) {
     for(int i = 0; i < row_blocks; i++) {
       for(int j = 0; j < col_blocks; j++) {
-        starpu_data_handle_t sub_handle = starpu_data_get_sub_data(data_handle, 2, i, j);
-        int err = starpu_task_insert(&fill_cl<DataType>,
-                                     STARPU_VALUE, &e, sizeof(e),
-                                     STARPU_W, sub_handle,
-                                     0);
+        starpu_data_handle_t handle = data_handle.get(i, j);
+        int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &fill_cl<DataType>,
+                                         STARPU_VALUE, &e, sizeof(e),
+                                         STARPU_W, handle,
+                                         0);
         if(err) { throw std::exception(); }
       }
     }
   }
-  
+
+  /*
   void assertEq(DataType e) {
     unpartition();
     size_t nx = starpu_matrix_get_nx(data_handle);
@@ -200,35 +183,36 @@ struct Matrix {
     }
     std::cout << std::endl;
   }
+  */
   
-  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType>& A, Matrix<DataType>& B, DataType beta, Matrix<DataType>& C) {
+  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType, row_blocks, col_blocks>& A, Matrix<DataType, row_blocks, col_blocks>& B, DataType beta, Matrix<DataType, row_blocks, col_blocks>& C) {
     assert(A.rows == C.rows);
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
-    assert(A.row_blocks == C.row_blocks);
-    assert(B.col_blocks == C.col_blocks);
-    assert(A.col_blocks == B.row_blocks);
+    assert(A.row_b == C.row_b);
+    assert(B.col_b == C.col_b);
+    assert(A.col_b == B.row_b);
     
-    for(int i = 0; i < C.row_blocks; i++) {
-      for(int j = 0; j < C.col_blocks; j++) {
-        for(int k = 0; k < A.col_blocks; k++) {
-          starpu_data_handle_t A_sub_handle = starpu_data_get_sub_data(A.data_handle, 2, i, k);
-          starpu_data_handle_t B_sub_handle = starpu_data_get_sub_data(B.data_handle, 2, k, j);
-          starpu_data_handle_t C_sub_handle = starpu_data_get_sub_data(C.data_handle, 2, i, j);
-          int err = starpu_task_insert(&gemm_cl<DataType>,
-                                       STARPU_VALUE, &transA, sizeof(transA),
-                                       STARPU_VALUE, &transB, sizeof(transB),
-                                       STARPU_VALUE, &alpha, sizeof(alpha),
-                                       STARPU_VALUE, &beta, sizeof(beta),
-                                       STARPU_R, A_sub_handle,
-                                       STARPU_R, B_sub_handle,
+    for(int i = 0; i < C.row_b; i++) {
+      for(int j = 0; j < C.col_b; j++) {
+        for(int k = 0; k < A.col_b; k++) {
+          starpu_data_handle_t A_sub_handle = A.data_handle.get(i, k);
+          starpu_data_handle_t B_sub_handle = B.data_handle.get(k, j);
+          starpu_data_handle_t C_sub_handle = C.data_handle.get(i, j);
+          int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &gemm_cl<DataType>,
+                                           STARPU_VALUE, &transA, sizeof(transA),
+                                           STARPU_VALUE, &transB, sizeof(transB),
+                                           STARPU_VALUE, &alpha, sizeof(alpha),
+                                           STARPU_VALUE, &beta, sizeof(beta),
+                                           STARPU_R, A_sub_handle,
+                                           STARPU_R, B_sub_handle,
 #if ENABLE_REDUX != 0
-                                       STARPU_MPI_REDUX, C_sub_handle,
+                                           STARPU_MPI_REDUX, C_sub_handle,
 #else
-                                       STARPU_RW, C_sub_handle,
+                                           STARPU_RW, C_sub_handle,
 #endif
-                                       STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
-                                       0);
+                                           STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
+                                           0);
           if(err) { throw std::exception(); }
         }
       }
