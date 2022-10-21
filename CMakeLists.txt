@@ -133,6 +133,7 @@ find_package(LAPACKE REQUIRED)
 # --------
 if(ENABLE_CUDA)
   # enable CUDA
+  find_package(CUDAToolkit)
   add_definitions(-DUSE_CUDA)
   enable_language(CUDA)
   # check whether CUDA is available
@@ -143,8 +144,6 @@ if(ENABLE_CUDA)
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
   endif()
-
-
 endif()
 
 # Add libraries
