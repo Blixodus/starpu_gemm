@@ -50,8 +50,13 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
 }
 */
 
-void test(int m, int n, int k) {
-  Matrix<float, 16, 16> A(m, k), B(k, n), C(m, n);
+void test(int m, int n, int k, int bs) {
+  Matrix<float> A(m, k, bs);
+  std::cout << "A Created" << std::endl;
+  Matrix<float> B(k, n, bs);
+  std::cout << "B Created" << std::endl;
+  Matrix<float> C(m, n, bs);
+  std::cout << "C Created" << std::endl;
   
   A.fill(1);
   B.fill(1);
@@ -59,8 +64,9 @@ void test(int m, int n, int k) {
   
   auto start = std::chrono::high_resolution_clock::now();
   
-  Matrix<float, 16, 16>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+  Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
   starpu_task_wait_for_all();
+  starpu_mpi_barrier(MPI_COMM_WORLD);
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
   std::cerr << "StarPU -- Time : " << time.count() << "s\n";
@@ -78,7 +84,7 @@ int main(int argc, char ** argv) {
   starpu_cublas_init();
 #endif
   
-  test(1024, 1024, 1024);
+  test(1024, 1024, 1024, 513);
   
 #ifdef USE_CUDA
   starpu_cublas_shutdown();
