@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.3)
-project(gemm LANGUAGES CXX) # LANGUAGES CXX)
+project(gemm LANGUAGES C CXX) # LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
