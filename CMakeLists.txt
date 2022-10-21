@@ -1,8 +1,22 @@
 cmake_minimum_required (VERSION 3.3)
 project(gemm LANGUAGES C CXX) # LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+# Define the compilation options of the project
+# ---------------------------------------------
+
+# Option to enable/disable the MPI compilation
+option( ENABLE_MPI "Define if MPI support should be enabled" ON )
+
+# Option to enable/disable the StarPU package
+option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
+
+# Option to enable/disable CUDA support
+option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
+
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+endif()
 
 # Check that we do no try to configure/build inside the source directory
 # ----------------------------------------------------------------------
@@ -66,18 +80,6 @@ else()
 endif()
 
 
-# Define the compilation options of the project
-# ---------------------------------------------
-
-# Option to enable/disable the MPI compilation
-option( ENABLE_MPI "Define if MPI support should be enabled" ON )
-
-# Option to enable/disable the StarPU package
-option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
-
-# Option to enable/disable CUDA support
-option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
-
 # Generate the config file that holds the define of the lib
 # ---------------------------------------------------------
 # configure_file (
@@ -130,9 +132,19 @@ find_package(LAPACKE REQUIRED)
 # USE_CUDA
 # --------
 if(ENABLE_CUDA)
+  # enable CUDA
   add_definitions(-DUSE_CUDA)
   enable_language(CUDA)
-  find_package(CUDAToolkit)
+  # check whether CUDA is available
+  include(CheckLanguage)
+  check_language(CUDA)
+  # set the standard (if not yet done so)
+  if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  endif()
+
+
 endif()
 
 # Add libraries
