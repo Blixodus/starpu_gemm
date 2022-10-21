@@ -96,50 +96,56 @@ starpu_codelet fill_cl = {
 
 static int mpi_tag = 0;
 
-template <typename DataType, size_t rows, size_t cols>
-struct MatrixData {
-  starpu_data_handle_t data_handle[rows * cols];
+template <typename Int>
+inline Int ceil_div(Int a, Int b) { return (a+b-1)/b; }
 
-  MatrixData(size_t mat_rows, size_t mat_cols) {
+template <typename DataType>
+struct MatrixData {
+  size_t row_blocks, col_blocks;
+  std::vector<starpu_data_handle_t> data_handle;
+
+  MatrixData(size_t rows, size_t cols, size_t block_size) : row_blocks(ceil_div(rows, block_size)), col_blocks(ceil_div(cols, block_size)), data_handle(row_blocks * col_blocks) {
     int rank, size;
     starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
     starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
-    for(size_t i = 0; i < rows * cols; i++) {
-      starpu_matrix_data_register(&data_handle[i], -1, 0, mat_rows, mat_rows, mat_cols, sizeof(DataType));
-      starpu_mpi_data_register(data_handle[i], mpi_tag++, i%size);
+    size_t row_final = (rows%block_size) ? rows%block_size : block_size;
+    size_t col_final = (cols%block_size) ? cols%block_size : block_size;
+    for(size_t i = 0; i < row_blocks; i++) {
+      for(size_t j = 0; j < col_blocks; j++) {
+        auto& handle = get(i, j);
+        size_t rows_block = (i==row_blocks-1) ? row_final : block_size;
+        size_t cols_block = (j==col_blocks-1) ? col_final : block_size;
+        starpu_matrix_data_register(&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType));
+        starpu_mpi_data_register(handle, mpi_tag++, (i+j)%size);
+        std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j << " " << rows_block << " " << cols_block << std::endl;
+      }
     }
   }
 
   ~MatrixData() {
-    for(size_t i = 0; i < rows * cols; i++) {
-      starpu_data_unregister(data_handle[i]);
+    for(auto& handle : data_handle) {
+      starpu_data_unregister(handle);
     }
   }
 
-  starpu_data_handle_t get(int i, int j) {
-    return data_handle[i + j * rows];
+  starpu_data_handle_t& get(size_t i, size_t j) {
+    return data_handle[i + j * row_blocks];
   }
 };
 
-template <typename DataType, size_t row_blocks, size_t col_blocks>
+template <typename DataType>
 struct Matrix {
   size_t rows, cols;
-  size_t row_b = row_blocks, col_b = col_blocks;
-  MatrixData<DataType, row_blocks, col_blocks> data_handle;
+  size_t block_size;
+  MatrixData<DataType> data_handle;
 
   Matrix() = default;
   
-  Matrix(size_t rows_, size_t cols_) : data_handle(rows_, cols_) { };
-
-  //DataType& operator()(size_t row, size_t col) { return elem(row, col); }
-  
-  //void fill_random() {
-  //  for(int i = 0; i < rows * cols; i++) { data[i] = (DataType)std::rand()/RAND_MAX; }
-  //}
+  Matrix(size_t rows_, size_t cols_, size_t block_size_) : rows(rows_), cols(cols_), block_size(block_size_), data_handle(rows, cols, block_size) { };
 
   void fill(DataType e) {
-    for(int i = 0; i < row_blocks; i++) {
-      for(int j = 0; j < col_blocks; j++) {
+    for(int i = 0; i < data_handle.row_blocks; i++) {
+      for(int j = 0; j < data_handle.col_blocks; j++) {
         starpu_data_handle_t handle = data_handle.get(i, j);
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &fill_cl<DataType>,
                                          STARPU_VALUE, &e, sizeof(e),
@@ -148,54 +154,26 @@ struct Matrix {
         if(err) { throw std::exception(); }
       }
     }
-  }
-
-  /*
-  void assertEq(DataType e) {
-    unpartition();
-    size_t nx = starpu_matrix_get_nx(data_handle);
-    size_t ny = starpu_matrix_get_ny(data_handle);
-    size_t ld = starpu_matrix_get_local_ld(data_handle);
-    DataType *mat = (DataType*)starpu_matrix_get_local_ptr(data_handle);
-    for(size_t i = 0; i < nx; i++) {
-      for(size_t j = 0; j < ny; j++) {
-        if(mat[i + j*ld] != e) {
-          std::cout << mat[i + j*ld] << " " << e << std::endl;
-          goto end;
-        }
-      }
-    }
-  end:
-    return;
+    std::cout << "FILL END" << std::endl;
   }
   
-  void print() {
-    unpartition();
-    size_t nx = starpu_matrix_get_nx(data_handle);
-    size_t ny = starpu_matrix_get_ny(data_handle);
-    size_t ld = starpu_matrix_get_local_ld(data_handle);
-    DataType *mat = (DataType*)starpu_matrix_get_local_ptr(data_handle);
-    for(size_t i = 0; i < nx; i++) {
-      for(size_t j = 0; j < ny; j++) {
-        printf("%5.2f ", mat[i + j*ld]);
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl;
-  }
-  */
-  
-  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType, row_blocks, col_blocks>& A, Matrix<DataType, row_blocks, col_blocks>& B, DataType beta, Matrix<DataType, row_blocks, col_blocks>& C) {
+  static void gemm(char transA, char transB, DataType alpha, Matrix<DataType>& A, Matrix<DataType>& B, DataType beta, Matrix<DataType>& C) {
     assert(A.rows == C.rows);
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
-    assert(A.row_b == C.row_b);
-    assert(B.col_b == C.col_b);
-    assert(A.col_b == B.row_b);
+    assert(A.block_size == B.block_size && B.block_size == C.block_size);
+
+#if ENABLE_REDUX != 0
+    for(int i = 0; i < C.data_handle.row_blocks; i++) {
+      for(int j = 0; j < C.data_handle.col_blocks; j++) {
+        starpu_data_set_reduction_methods(C.data_handle.get(i,j), &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
+      }
+    }
+#endif
     
-    for(int i = 0; i < C.row_b; i++) {
-      for(int j = 0; j < C.col_b; j++) {
-        for(int k = 0; k < A.col_b; k++) {
+    for(int i = 0; i < C.data_handle.row_blocks; i++) {
+      for(int j = 0; j < C.data_handle.col_blocks; j++) {
+        for(int k = 0; k < A.data_handle.col_blocks; k++) {
           starpu_data_handle_t A_sub_handle = A.data_handle.get(i, k);
           starpu_data_handle_t B_sub_handle = B.data_handle.get(k, j);
           starpu_data_handle_t C_sub_handle = C.data_handle.get(i, j);
@@ -218,9 +196,6 @@ struct Matrix {
       }
     }
   }
-
-//private:
-  //DataType& elem(size_t row, size_t col) { return data[row + col * rows]; }
 };
 
 #endif
