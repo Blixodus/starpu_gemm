@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.3)
-project(gemm LANGUAGES C CXX) # LANGUAGES CXX)
+project(gemm LANGUAGES CXX C) # LANGUAGES CXX)
 
 # Define the compilation options of the project
 # ---------------------------------------------
@@ -129,23 +129,6 @@ find_package(CBLAS REQUIRED)
 set( LAPACKE_MT FALSE )
 find_package(LAPACKE REQUIRED)
 
-# USE_CUDA
-# --------
-if(ENABLE_CUDA)
-  # enable CUDA
-  find_package(CUDAToolkit)
-  add_definitions(-DUSE_CUDA)
-  enable_language(CUDA)
-  # check whether CUDA is available
-  include(CheckLanguage)
-  check_language(CUDA)
-  # set the standard (if not yet done so)
-  if(NOT DEFINED CMAKE_CUDA_STANDARD)
-    set(CMAKE_CUDA_STANDARD 17)
-    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-  endif()
-endif()
-
 # Add libraries
 # -------------
 
@@ -159,6 +142,23 @@ set( gemmlib_srcs
 )
 
 add_library( gemmlib ${gemmlib_srcs} )
+
+if(ENABLE_CUDA)
+  # enable CUDA
+  find_package(CUDAToolkit)
+  add_definitions(-DUSE_CUDA)
+  enable_language(CUDA)
+  # check whether CUDA is available
+  include(CheckLanguage)
+  check_language(CUDA)
+  # set the standard (if not yet done so)
+  if(NOT DEFINED CMAKE_CUDA_STANDARD)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  endif()
+  # force compilation with nvcc
+  set_source_files_properties( ${gemmlib_srcs} PROPERTIES LANGUAGE CUDA)
+endif()
 
 if(ENABLE_MPI)
   target_link_libraries( gemmlib PUBLIC MPI::MPI_CXX )
