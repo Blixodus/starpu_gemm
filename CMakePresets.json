@@ -1,0 +1,56 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+        "name": "default",
+        "displayName": "default config",
+        "description": "default build",
+        "binaryDir": "${sourceDir}/build/default",
+        "cacheVariables": {
+            "CMAKE_BUILD_TYPE": "Debug",
+            "CMAKE_EXPORT_COMPILE_COMMANDS": "1"
+        },
+        "generator": "Unix Makefiles"
+    },
+        {
+        "name": "cuda",
+        "inherits": "default",
+        "displayName": "cuda-enabled config",
+        "description": "Default build in the cuda case",
+        "binaryDir": "${sourceDir}/build/cuda",
+        "cacheVariables": {
+            "ENABLE_CUDA": "ON"
+        }
+    }
+    ],
+    "buildPresets": [
+        {
+        "name": "default",
+        "configurePreset": "default"
+    },
+        {
+        "name": "cuda",
+        "configurePreset": "cuda"
+    }
+    ],
+    "testPresets": [
+        {
+        "name": "default",
+        "configurePreset": "default",
+        "output": {"outputOnFailure": true},
+        "execution": {"noTestsAction": "error", "stopOnFailure": true}
+    },
+        {
+        "name": "cuda",
+        "configurePreset": "cuda",
+        "output": {"outputOnFailure": true},
+        "execution": {"noTestsAction": "error", "stopOnFailure": true}
+    }
+
+    ]
+}

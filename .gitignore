@@ -2,6 +2,7 @@ gemm
 results
 figures
 build
+.build
 
 # StarPU data and trace files
 *.gp
@@ -39,3 +40,6 @@ build
 *.exe
 *.out
 *.app
+
+# https://cmake.org/cmake/help/git-stage/manual/cmake-presets.7.html
+CMakeUserPresets.json
