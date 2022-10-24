@@ -1,0 +1,1 @@
+use guixs -D starpu-example-cppgemm-cuda openssh
