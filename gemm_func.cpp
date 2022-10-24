@@ -12,7 +12,7 @@
 
 template <typename DataType>
 void gemm_cpu_func(void * buffers[], void * cl_args) {
-  std::cerr << "GEMM CPU\n";
+  //std::cerr << "GEMM CPU\n";
   char transA, transB;
   DataType alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -34,7 +34,7 @@ template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
 #ifdef USE_CUDA
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
-  std::cerr << "GEMM CUDA\n";
+  //std::cerr << "GEMM CUDA\n";
   char transA, transB;
   DataType alpha, beta;
   starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);

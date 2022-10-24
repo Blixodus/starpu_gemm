@@ -51,12 +51,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
 */
 
 void test(int m, int n, int k, int bs) {
-  Matrix<float> A(m, k, bs);
-  std::cout << "A Created" << std::endl;
-  Matrix<float> B(k, n, bs);
-  std::cout << "B Created" << std::endl;
-  Matrix<float> C(m, n, bs);
-  std::cout << "C Created" << std::endl;
+  Matrix<float> A(m, k, bs), B(k, n, bs), C(m, n, bs);
   
   A.fill(1);
   B.fill(1);
@@ -84,7 +79,7 @@ int main(int argc, char ** argv) {
   starpu_cublas_init();
 #endif
   
-  test(1024, 1024, 1024, 513);
+  test(1<<15, 1<<15, 1<<15, 1<<11);
   
 #ifdef USE_CUDA
   starpu_cublas_shutdown();

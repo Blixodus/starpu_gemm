@@ -117,7 +117,7 @@ struct MatrixData {
         size_t cols_block = (j==col_blocks-1) ? col_final : block_size;
         starpu_matrix_data_register(&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType));
         starpu_mpi_data_register(handle, mpi_tag++, (i+j)%size);
-        std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j << " " << rows_block << " " << cols_block << std::endl;
+        //std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j << " " << rows_block << " " << cols_block << std::endl;
       }
     }
   }
@@ -154,7 +154,6 @@ struct Matrix {
         if(err) { throw std::exception(); }
       }
     }
-    std::cout << "FILL END" << std::endl;
   }
   
   static void gemm(char transA, char transB, DataType alpha, Matrix<DataType>& A, Matrix<DataType>& B, DataType beta, Matrix<DataType>& C) {
