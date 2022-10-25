@@ -37,6 +37,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   auto start = std::chrono::high_resolution_clock::now();
   
   Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+  starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
