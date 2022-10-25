@@ -23,6 +23,7 @@
 #include "bzero_func.hpp"
 #include "accumulate_func.hpp"
 #include "fill_func.hpp"
+#include "print_func.hpp"
 #include "matrix.hpp"
 
 void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
@@ -33,6 +34,13 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   A.fill(1);
   B.fill(1);
   C.fill(0);
+
+  //A.print();
+
+  
+  Matrix<float> X(5, 7, 2);
+  X.fill(1);
+  X.print();
   
   auto start = std::chrono::high_resolution_clock::now();
   

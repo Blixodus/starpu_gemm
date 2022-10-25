@@ -94,6 +94,17 @@ starpu_codelet fill_cl = {
   .model = (std::is_same_v<DataType, float>)?&fill_perf_model_float:&fill_perf_model_double,
 };
 
+template <typename DataType>
+starpu_codelet print_cl = {
+  .cpu_funcs = { print_cpu_func<DataType> },
+#ifdef USE_CUDA
+  .cuda_funcs = { print_cuda_func<DataType> },
+  .cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
+  .nbuffers = 1,
+  .modes = { STARPU_R },
+};
+
 static int mpi_tag = 0;
 
 template <typename Int>
@@ -150,6 +161,18 @@ struct Matrix {
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &fill_cl<DataType>,
                                          STARPU_VALUE, &e, sizeof(e),
                                          STARPU_W, handle,
+                                         0);
+        if(err) { throw std::exception(); }
+      }
+    }
+  }
+
+  void print() {
+    for(int i = 0; i < data_handle.row_blocks; i++) {
+      for(int j = 0; j < data_handle.col_blocks; j++) {
+        starpu_data_handle_t handle = data_handle.get(i, j);
+        int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &print_cl<DataType>,
+                                         STARPU_R, handle,
                                          0);
         if(err) { throw std::exception(); }
       }

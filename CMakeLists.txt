@@ -138,6 +138,7 @@ set( gemmlib_srcs
   bzero_func.cpp
   accumulate_func.cpp
   fill_func.cpp
+  print_func.cpp
   cublas_perf.cpp
 )
 
