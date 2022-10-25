@@ -43,3 +43,5 @@ build
 
 # https://cmake.org/cmake/help/git-stage/manual/cmake-presets.7.html
 CMakeUserPresets.json
+
+.vscode/
