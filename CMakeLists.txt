@@ -140,6 +140,7 @@ set( gemmlib_srcs
   fill_func.cpp
   print_func.cpp
   cublas_perf.cpp
+  asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )

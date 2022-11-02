@@ -45,7 +45,7 @@ void fill_cuda_func(void * buffers[], void * cl_args) {
   DataType *mat = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
   dim3 threadsPerBlock(32,32);
   dim3 numBlocks((rows+threadsPerBlock.x-1)/threadsPerBlock.x, (cols+threadsPerBlock.y-1)/threadsPerBlock.y);
-  fill_kernel<<<numBlocks, threadsPerBlock>>>(mat, rows, cols, ld, e);
+  fill_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(mat, rows, cols, ld, e);
 }
 
 template void fill_cuda_func<float>(void * buffers[], void * cl_args);

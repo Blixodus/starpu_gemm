@@ -23,6 +23,7 @@
 #include "bzero_func.hpp"
 #include "accumulate_func.hpp"
 #include "fill_func.hpp"
+#include "asserteq_func.hpp"
 #include "print_func.hpp"
 #include "matrix.hpp"
 
@@ -38,9 +39,9 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   //A.print();
 
   
-  Matrix<float> X(5, 7, 2);
-  X.fill(1);
-  X.print();
+  //Matrix<float> X(5, 7, 2);
+  //X.fill(1);
+  //X.print();
   
   auto start = std::chrono::high_resolution_clock::now();
   
@@ -54,7 +55,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
-  //C.assertEq(k);
+  C.assertEq(k);
 }
 
 int main(int argc, char ** argv) {

@@ -105,6 +105,17 @@ starpu_codelet print_cl = {
   .modes = { STARPU_R },
 };
 
+template <typename DataType>
+starpu_codelet asserteq_cl = {
+  .cpu_funcs = { asserteq_cpu_func<DataType> },
+#ifdef USE_CUDA
+  .cuda_funcs = { asserteq_cuda_func<DataType> },
+  .cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
+  .nbuffers = 1,
+  .modes = { STARPU_R },
+};
+
 static int mpi_tag = 0;
 
 template <typename Int>
@@ -172,6 +183,19 @@ struct Matrix {
       for(int j = 0; j < data_handle.col_blocks; j++) {
         starpu_data_handle_t handle = data_handle.get(i, j);
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &print_cl<DataType>,
+                                         STARPU_R, handle,
+                                         0);
+        if(err) { throw std::exception(); }
+      }
+    }
+  }
+
+  void assertEq(const DataType val) {
+    for(int i = 0; i < data_handle.row_blocks; i++) {
+      for(int j = 0; j < data_handle.col_blocks; j++) {
+        starpu_data_handle_t handle = data_handle.get(i, j);
+        int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &asserteq_cl<DataType>,
+                                         STARPU_VALUE, &val, sizeof(val),
                                          STARPU_R, handle,
                                          0);
         if(err) { throw std::exception(); }
