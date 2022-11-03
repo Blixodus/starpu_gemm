@@ -107,6 +107,7 @@ int main(int argc, char ** argv) {
 #ifdef USE_CUDA
   starpu_cublas_init();
 #endif
+  //test_gemm(5, 5, 5, 2, resultFile);
   
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
