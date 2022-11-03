@@ -178,11 +178,12 @@ struct Matrix {
     }
   }
 
-  void print() {
+  void print(char c) {
     for(int i = 0; i < data_handle.row_blocks; i++) {
       for(int j = 0; j < data_handle.col_blocks; j++) {
         starpu_data_handle_t handle = data_handle.get(i, j);
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &print_cl<DataType>,
+                                         STARPU_VALUE, &c, sizeof(c),
                                          STARPU_R, handle,
                                          0);
         if(err) { throw std::exception(); }

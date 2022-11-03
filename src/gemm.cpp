@@ -36,12 +36,15 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   B.fill(1);
   C.fill(0);
 
-  //A.print();
-
-  
-  //Matrix<float> X(5, 7, 2);
-  //X.fill(1);
-  //X.print();
+  A.print('A');
+  starpu_mpi_barrier(MPI_COMM_WORLD);
+  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
+  B.print('B');
+  starpu_mpi_barrier(MPI_COMM_WORLD);
+  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
+  C.print('C');
+  starpu_mpi_barrier(MPI_COMM_WORLD);
+  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
   
   auto start = std::chrono::high_resolution_clock::now();
   
