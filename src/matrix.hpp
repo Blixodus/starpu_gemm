@@ -24,7 +24,7 @@ starpu_codelet gemm_cl = {
   .cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
   .cuda_funcs = { gemm_cuda_func<DataType> },
-  .cuda_flags = { STARPU_CUDA_ASYNC },
+  //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 3,
 #if ENABLE_REDUX != 0
@@ -87,7 +87,7 @@ starpu_codelet fill_cl = {
   .cpu_funcs = { fill_cpu_func<DataType> },
 #ifdef USE_CUDA
   .cuda_funcs = { fill_cuda_func<DataType> },
-  .cuda_flags = { STARPU_CUDA_ASYNC },
+  //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 1,
   .modes = { STARPU_W },
@@ -99,7 +99,7 @@ starpu_codelet print_cl = {
   .cpu_funcs = { print_cpu_func<DataType> },
 #ifdef USE_CUDA
   .cuda_funcs = { print_cuda_func<DataType> },
-  .cuda_flags = { STARPU_CUDA_ASYNC },
+  //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 1,
   .modes = { STARPU_R },
@@ -110,7 +110,7 @@ starpu_codelet asserteq_cl = {
   .cpu_funcs = { asserteq_cpu_func<DataType> },
 #ifdef USE_CUDA
   .cuda_funcs = { asserteq_cuda_func<DataType> },
-  .cuda_flags = { STARPU_CUDA_ASYNC },
+  //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 1,
   .modes = { STARPU_R },
