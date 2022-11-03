@@ -133,14 +133,14 @@ find_package(LAPACKE REQUIRED)
 # -------------
 
 set( gemmlib_srcs
-  blas.cpp
-  gemm_func.cpp
-  bzero_func.cpp
-  accumulate_func.cpp
-  fill_func.cpp
-  print_func.cpp
-  cublas_perf.cpp
-  asserteq_func.cpp
+  src/blas.cpp
+  src/gemm_func.cpp
+  src/bzero_func.cpp
+  src/accumulate_func.cpp
+  src/fill_func.cpp
+  src/print_func.cpp
+  src/cublas_perf.cpp
+  src/asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )
@@ -180,7 +180,7 @@ install(TARGETS gemmlib
 
 # Add executable
 
-add_executable(gemm gemm.cpp)
+add_executable(gemm src/gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
 
 if(ENABLE_CUDA)
@@ -194,7 +194,3 @@ if (ENABLE_STARPU)
 endif (ENABLE_STARPU)
 
 install(TARGETS gemm RUNTIME DESTINATION bin)
-
-
-
-
