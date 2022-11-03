@@ -59,6 +59,11 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
   C.assertEq(k);
+  starpu_mpi_barrier(MPI_COMM_WORLD);
+  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
+  C.print('C');
+  starpu_mpi_barrier(MPI_COMM_WORLD);
+  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 }
 
 int main(int argc, char ** argv) {
