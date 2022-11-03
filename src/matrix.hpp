@@ -184,6 +184,9 @@ struct Matrix {
         starpu_data_handle_t handle = data_handle.get(i, j);
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &print_cl<DataType>,
                                          STARPU_VALUE, &c, sizeof(c),
+                                         STARPU_VALUE, &i, sizeof(i),
+                                         STARPU_VALUE, &j, sizeof(j),
+                                         STARPU_VALUE, &block_size, sizeof(block_size),
                                          STARPU_R, handle,
                                          0);
         if(err) { throw std::exception(); }
