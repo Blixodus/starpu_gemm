@@ -8,7 +8,7 @@
 
 template <typename DataType>
 void fill_cpu_func(void * buffers[], void * cl_args) {
-  std::cerr << "FILL CPU\n";
+  //std::cerr << "FILL CPU\n";
   DataType e;
   starpu_codelet_unpack_args(cl_args, &e);
   int rows = STARPU_MATRIX_GET_NX(buffers[0]);
@@ -37,10 +37,10 @@ __global__ void fill_kernel(DataType *mat, int rows, int cols, int ld, DataType 
 
 template <typename DataType>
 void fill_cuda_func(void * buffers[], void * cl_args) {
-  std::cerr << "FILL CUDA\n";
+  //std::cerr << "FILL CUDA\n";
   DataType e;
   starpu_codelet_unpack_args(cl_args, &e);
-  printf("Filling with %f\n", e);
+  //printf("Filling with %f\n", e);
   int rows = STARPU_MATRIX_GET_NX(buffers[0]);
   int cols = STARPU_MATRIX_GET_NY(buffers[0]);
   int ld = STARPU_MATRIX_GET_LD(buffers[0]);
