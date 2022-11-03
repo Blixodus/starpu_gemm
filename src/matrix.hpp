@@ -84,9 +84,9 @@ static struct starpu_perfmodel fill_perf_model_double =
 
 template <typename DataType>
 starpu_codelet fill_cl = {
-  //.cpu_funcs = { fill_cpu_func<DataType> },
+  .cpu_funcs = { fill_cpu_func<DataType> },
 #ifdef USE_CUDA
-  .cuda_funcs = { fill_cuda_func<DataType> },
+  //.cuda_funcs = { fill_cuda_func<DataType> },
   //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 1,
