@@ -16,7 +16,7 @@ void asserteq_cpu_func(void * buffers[], void * cl_args) {
   DataType *mat = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
   for(int i = 0; i < cols; i++) {
     for(int j = 0; j < rows; j++) {
-      if(mat[i*ld + j] != val) { printf("Wrong ! %f %f\n", mat[i*ld + j], val); };
+      if(mat[i*ld + j] != val) { printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i*ld + j], val); };
     }
   }
 }
@@ -30,7 +30,7 @@ __global__ void asserteq_kernel(DataType *mat, int rows, int cols, int ld, DataT
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int j = blockIdx.y * blockDim.y + threadIdx.y;
   if(i < rows && j < cols) {
-    if(mat[j*ld + i] != val) { printf("Wrong ! %f %f\n", mat[j*ld + i], val); }
+    if(mat[j*ld + i] != val) { printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i*ld + j], val); }
   }
 }
 
