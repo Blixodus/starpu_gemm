@@ -1,5 +1,4 @@
-#ifndef MATRIX_HPP
-#define MATRIX_HPP
+#pragma once
 
 static int enable_cpu = ENABLE;
 static int enable_gpu = ENABLE;
@@ -247,5 +246,3 @@ struct Matrix {
     }
   }
 };
-
-#endif
