@@ -1,9 +1,14 @@
 #pragma once
 
+#include "helper.hpp"
+
 static int enable_cpu = ENABLE;
 static int enable_gpu = ENABLE;
 static int can_execute(unsigned workerid, struct starpu_task * task, unsigned nimpl) {
-  if(starpu_worker_get_type(workerid) == STARPU_CPU_WORKER) return enable_cpu;
+  if(starpu_worker_get_type(safe_cast<int>(workerid)) == STARPU_CPU_WORKER) {
+    return enable_cpu;
+  }
+
   return enable_gpu;
 }
 
@@ -66,7 +71,7 @@ starpu_codelet accumulate_matrix_cl = {
 #endif
   .nbuffers = 2,
   .modes = { starpu_data_access_mode(STARPU_RW|STARPU_COMMUTE), STARPU_R },
-  .model = (std::is_same_v<DataType, float>)?&accumulate_perf_model_float:&accumulate_perf_model_double,
+  .model = (std::is_same_v<DataType, float>) ? &accumulate_perf_model_float : &accumulate_perf_model_double,
 };
 
 static struct starpu_perfmodel fill_perf_model_float =
@@ -118,26 +123,33 @@ starpu_codelet asserteq_cl = {
 static int mpi_tag = 0;
 
 template <typename Int>
-inline Int ceil_div(Int a, Int b) { return (a+b-1)/b; }
+inline Int ceil_div(Int a, Int b) {
+  return (a + b - 1) / b;
+}
 
 template <typename DataType>
 struct MatrixData {
-  size_t row_blocks, col_blocks;
+  uint32_t row_blocks, col_blocks;
   std::vector<starpu_data_handle_t> data_handle;
 
-  MatrixData(size_t rows, size_t cols, size_t block_size) : row_blocks(ceil_div(rows, block_size)), col_blocks(ceil_div(cols, block_size)), data_handle(row_blocks * col_blocks) {
+  MatrixData(uint32_t rows, uint32_t cols, uint32_t block_size) : row_blocks(ceil_div(rows, block_size)), col_blocks(ceil_div(cols, block_size)), data_handle(row_blocks * col_blocks) {
     int rank, size;
+
     starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
     starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
-    size_t row_final = (rows%block_size) ? rows%block_size : block_size;
-    size_t col_final = (cols%block_size) ? cols%block_size : block_size;
-    for(size_t i = 0; i < row_blocks; i++) {
-      for(size_t j = 0; j < col_blocks; j++) {
+
+    auto row_final = (rows % block_size) ? rows % block_size : block_size;
+    auto col_final = (cols % block_size) ? cols % block_size : block_size;
+
+    for(uint32_t i = 0; i < row_blocks; i++) {
+      for(uint32_t j = 0; j < col_blocks; j++) {
         auto& handle = get(i, j);
-        size_t rows_block = (i==row_blocks-1) ? row_final : block_size;
-        size_t cols_block = (j==col_blocks-1) ? col_final : block_size;
+
+        auto rows_block = (i == row_blocks-1) ? row_final : block_size;
+        auto cols_block = (j == col_blocks-1) ? col_final : block_size;
+
         starpu_matrix_data_register(&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType));
-        starpu_mpi_data_register(handle, mpi_tag++, (i+j)%size);
+        starpu_mpi_data_register(handle, mpi_tag++, static_cast<int>(i + j) % size);
         //std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j << " " << rows_block << " " << cols_block << std::endl;
       }
     }
@@ -149,58 +161,64 @@ struct MatrixData {
     }
   }
 
-  starpu_data_handle_t& get(size_t i, size_t j) {
+  starpu_data_handle_t& get(uint32_t i, uint32_t j) {
     return data_handle[i + j * row_blocks];
   }
 };
 
 template <typename DataType>
 struct Matrix {
-  size_t rows, cols;
-  size_t block_size;
+  uint32_t rows, cols;
+  uint32_t block_size;
   MatrixData<DataType> data_handle;
 
   Matrix() = default;
   
-  Matrix(size_t rows_, size_t cols_, size_t block_size_) : rows(rows_), cols(cols_), block_size(block_size_), data_handle(rows, cols, block_size) { };
+  Matrix(uint32_t rows_, uint32_t cols_, uint32_t block_size_) : rows(rows_), cols(cols_), block_size(block_size_), data_handle(rows, cols, block_size) { };
 
   void fill(DataType e) {
-    for(int i = 0; i < data_handle.row_blocks; i++) {
-      for(int j = 0; j < data_handle.col_blocks; j++) {
-        starpu_data_handle_t handle = data_handle.get(i, j);
+    for(uint32_t i = 0; i < data_handle.row_blocks; i++) {
+      for(uint32_t j = 0; j < data_handle.col_blocks; j++) {
+        auto handle = data_handle.get(i, j);
+
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &fill_cl<DataType>,
                                          STARPU_VALUE, &e, sizeof(e),
                                          STARPU_W, handle,
-                                         0);
+                                         NULL);
+
         if(err) { throw std::exception(); }
       }
     }
   }
 
   void print(char c) {
-    for(int i = 0; i < data_handle.row_blocks; i++) {
-      for(int j = 0; j < data_handle.col_blocks; j++) {
-        starpu_data_handle_t handle = data_handle.get(i, j);
+    for(uint32_t i = 0; i < data_handle.row_blocks; i++) {
+      for(uint32_t j = 0; j < data_handle.col_blocks; j++) {
+        auto handle = data_handle.get(i, j);
+
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &print_cl<DataType>,
                                          STARPU_VALUE, &c, sizeof(c),
                                          STARPU_VALUE, &i, sizeof(i),
                                          STARPU_VALUE, &j, sizeof(j),
                                          STARPU_VALUE, &block_size, sizeof(block_size),
                                          STARPU_R, handle,
-                                         0);
+                                         NULL);
+
         if(err) { throw std::exception(); }
       }
     }
   }
 
   void assertEq(const DataType val) {
-    for(int i = 0; i < data_handle.row_blocks; i++) {
-      for(int j = 0; j < data_handle.col_blocks; j++) {
-        starpu_data_handle_t handle = data_handle.get(i, j);
+    for(uint32_t i = 0; i < data_handle.row_blocks; i++) {
+      for(uint32_t j = 0; j < data_handle.col_blocks; j++) {
+        auto handle = data_handle.get(i, j);
+
         int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &asserteq_cl<DataType>,
                                          STARPU_VALUE, &val, sizeof(val),
                                          STARPU_R, handle,
-                                         0);
+                                         NULL);
+
         if(err) { throw std::exception(); }
       }
     }
@@ -213,19 +231,20 @@ struct Matrix {
     assert(A.block_size == B.block_size && B.block_size == C.block_size);
 
 #if ENABLE_REDUX != 0
-    for(int i = 0; i < C.data_handle.row_blocks; i++) {
-      for(int j = 0; j < C.data_handle.col_blocks; j++) {
+    for(uint32_t i = 0; i < C.data_handle.row_blocks; i++) {
+      for(uint32_t j = 0; j < C.data_handle.col_blocks; j++) {
         starpu_data_set_reduction_methods(C.data_handle.get(i,j), &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
       }
     }
 #endif
     
-    for(int i = 0; i < C.data_handle.row_blocks; i++) {
-      for(int j = 0; j < C.data_handle.col_blocks; j++) {
-        for(int k = 0; k < A.data_handle.col_blocks; k++) {
-          starpu_data_handle_t A_sub_handle = A.data_handle.get(i, k);
-          starpu_data_handle_t B_sub_handle = B.data_handle.get(k, j);
-          starpu_data_handle_t C_sub_handle = C.data_handle.get(i, j);
+    for(uint32_t i = 0; i < C.data_handle.row_blocks; i++) {
+      for(uint32_t j = 0; j < C.data_handle.col_blocks; j++) {
+        for(uint32_t k = 0; k < A.data_handle.col_blocks; k++) {
+          auto A_sub_handle = A.data_handle.get(i, k);
+          auto B_sub_handle = B.data_handle.get(k, j);
+          auto C_sub_handle = C.data_handle.get(i, j);
+
           int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &gemm_cl<DataType>,
                                            STARPU_VALUE, &transA, sizeof(transA),
                                            STARPU_VALUE, &transB, sizeof(transB),

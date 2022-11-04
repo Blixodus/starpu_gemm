@@ -13,6 +13,18 @@ option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
 # Option to enable/disable CUDA support
 option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
 
+add_compile_options(
+  -Wall -Wextra # base warnings
+  -Wfloat-equal # prevent comparing floats with ==
+  -Wold-style-cast # c-style casts
+  -Wconversion -Wsign-conversion # type conversion
+  -Wformat=2 # check printf-style templates string
+  # -Wpadded
+  -Wpointer-arith # warn on sizeof(fn) or sizeof(void) (enabled by Wpedantic but we can't use that because of nvcc)
+  -Wcast-align
+  -Wno-c++20-extensions -Wno-missing-field-initializers -Wno-unused-parameter # it would be hell to work on starpu without disable these
+)
+
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)

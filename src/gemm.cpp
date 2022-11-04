@@ -27,7 +27,7 @@
 #include "print_func.hpp"
 #include "matrix.hpp"
 
-void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
+void test_gemm(uint32_t m, uint32_t n, uint32_t k, uint32_t block_size, std::ofstream& resultFile) {
   std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
   
   Matrix<float> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
@@ -58,11 +58,11 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
   std::cerr << "StarPU -- Time : " << time.count() << "s\n";
-  std::cerr << "StarPU -- Performance : " << 2L * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
+  std::cerr << "StarPU -- Performance : " << 2.0 * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
   
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
   
-  C.assertEq(k);
+  C.assertEq(static_cast<float>(k));
   starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
   sleep(2);
@@ -77,13 +77,13 @@ int main(int argc, char ** argv) {
     std::cerr << "Usage : " << argv[0] << " [exp] [k_min] [k_max] [bs_min] [bs_max]" << std::endl;
     return 1;
   }
-  const int exp = atoi(argv[1]);
-  const int k_min = atoi(argv[2]);
-  const int k_max = std::min(atoi(argv[3]), exp);
-  const int b_min = atoi(argv[4]);
-  const int b_max = std::min(atoi(argv[5]), exp);
-  const int m = 1<<exp;
-  const int n = 1<<exp;
+  const uint32_t exp = stoui(argv[1]);
+  const uint32_t k_min = stoui(argv[2]);
+  const uint32_t k_max = std::min(stoui(argv[3]), exp);
+  const uint32_t b_min = stoui(argv[4]);
+  const uint32_t b_max = std::min(stoui(argv[5]), exp);
+  const uint32_t m = 1<<exp;
+  const uint32_t n = 1<<exp;
 
   std::ofstream resultFile;
   /*
@@ -103,17 +103,19 @@ int main(int argc, char ** argv) {
 
   int err = starpu_init(NULL);
   if(err) { throw std::exception(); }
+
   err = starpu_mpi_init(&argc, &argv, 1);
   if(err) { throw std::exception(); }
+
 #ifdef USE_CUDA
   starpu_cublas_init();
 #endif
   //test_gemm(1, 1, 2, 1, resultFile);
   
-  for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
-    const int block_size = 1<<b_exp;
-    for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
-      const int k = 1<<k_exp;
+  for(uint32_t b_exp = b_min; b_exp <= b_max; b_exp++) {
+    const uint32_t block_size = 1<<b_exp;
+    for(uint32_t k_exp = k_min; k_exp <= k_max; k_exp++) {
+      const uint32_t k = 1<<k_exp;
       test_gemm(m, n, k, block_size, resultFile);
     }
   }
