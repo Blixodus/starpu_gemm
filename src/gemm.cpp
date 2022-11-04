@@ -35,20 +35,6 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   A.fill(1);
   B.fill(1);
   C.fill(0);
-
-  
-  A.print('A');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  B.print('B');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  C.print('C');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
   
   auto start = std::chrono::high_resolution_clock::now();
   
@@ -63,13 +49,6 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
   
   C.assertEq(k);
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  C.print('C');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  
 }
 
 int main(int argc, char ** argv) {
@@ -108,7 +87,6 @@ int main(int argc, char ** argv) {
 #ifdef USE_CUDA
   starpu_cublas_init();
 #endif
-  //test_gemm(1, 1, 2, 1, resultFile);
   
   for(int b_exp = b_min; b_exp <= b_max; b_exp++) {
     const int block_size = 1<<b_exp;
