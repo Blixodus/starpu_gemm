@@ -14,29 +14,30 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
   cublasStatus_t stat;
   cublasHandle_t handle;
   
-  size_t size_A = m*k*sizeof(float);
-  size_t size_B = k*n*sizeof(float);
-  size_t size_C = m*n*sizeof(float);
+  auto size_A = static_cast<size_t>(m * k) * sizeof(float);
+  auto size_B = static_cast<size_t>(k * n) * sizeof(float);
+  auto size_C = static_cast<size_t>(m * n) * sizeof(float);
 
   
   float * h_A, * h_B, * h_C;
+
   if(pin) {
-    cudaStat = cudaMallocHost((void**)&h_A, size_A);
+    cudaStat = cudaMallocHost(reinterpret_cast<void**>(&h_A), size_A);
     if (cudaStat != cudaSuccess) {
       printf ("host memory allocation failed");
     }
-    cudaStat = cudaMallocHost((void**)&h_B, size_B);
+    cudaStat = cudaMallocHost(reinterpret_cast<void**>(&h_B), size_B);
     if (cudaStat != cudaSuccess) {
       printf ("host memory allocation failed");
     }
-    cudaStat = cudaMallocHost((void**)&h_C, size_C);
+    cudaStat = cudaMallocHost(reinterpret_cast<void**>(&h_C), size_C);
     if (cudaStat != cudaSuccess) {
       printf ("host memory allocation failed");
     }
   } else {
-    h_A = (float*)malloc(size_A);
-    h_B = (float*)malloc(size_B);
-    h_C = (float*)malloc(size_C);
+    h_A = reinterpret_cast<float*>(malloc(size_A));
+    h_B = reinterpret_cast<float*>(malloc(size_B));
+    h_C = reinterpret_cast<float*>(malloc(size_C));
   }
 
   //for(int i = 0; i < size_A/sizeof(float); i++) { h_A[i] = 1; }
@@ -62,7 +63,7 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
   cudaMemcpy(d_B, h_B, size_B, cudaMemcpyHostToDevice);
   std::chrono::duration<double> timeAB = std::chrono::high_resolution_clock::now() - startAB;
   std::cerr << "Transfer time : " << timeAB.count() << "s" << std::endl;
-  std::cerr << "Performance : " << (size_A + size_B) / timeAB.count() / 1e9 << "GB/s" << std::endl;
+  std::cerr << "Performance : " << static_cast<double>(size_A + size_B) / timeAB.count() / 1e9 << "GB/s" << std::endl;
   
   stat = cublasCreate(&handle);
   if(stat != CUBLAS_STATUS_SUCCESS) {
@@ -74,7 +75,7 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
   cudaDeviceSynchronize();
   std::chrono::duration<double> timeBLAS = std::chrono::high_resolution_clock::now() - startBLAS;
   std::cerr << "BLAS time : " << timeBLAS.count() << "s" << std::endl;
-  std::cerr << "Performance : " << 2L * m * n * k / timeBLAS.count() / 1e9 << "Gflop/s" << std::endl;
+  std::cerr << "Performance : " << 2.0 * m * n * k / timeBLAS.count() / 1e9 << "Gflop/s" << std::endl;
   if(stat != CUBLAS_STATUS_SUCCESS) {
     printf ("CUBLAS GEMM failed\n");
   }
@@ -84,14 +85,14 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
   cudaMemcpy(h_C, d_C, size_C, cudaMemcpyDeviceToHost);
   std::chrono::duration<double> timeC = std::chrono::high_resolution_clock::now() - startC;
   std::cerr << "Transfer time : " << timeC.count() << "s" << std::endl;
-  std::cerr << "Performance : " << (size_C) / timeC.count() / 1e9 << "GB/s" << std::endl;
+  std::cerr << "Performance : " << static_cast<double>(size_C) / timeC.count() / 1e9 << "GB/s" << std::endl;
 
   
   std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - startAB;
   std::cerr << "Time : " << time.count() << "s" << std::endl;
-  std::cerr << "Performance : " << 2L * m * n * k / time.count() / 1e9 << "Gflop/s" << std::endl;
+  std::cerr << "Performance : " << 2.0 * m * n * k / time.count() / 1e9 << "Gflop/s" << std::endl;
   
-  resultFile << 0 << ";" << 0 << ";" << m << ";" << n << ";" << k << ";" << 0 << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
+  resultFile << 0 << ";" << 0 << ";" << m << ";" << n << ";" << k << ";" << 0 << ";" << 2.0 * m * n * k / time.count() / 1e12 << std::endl;
 
   cudaFree(d_A);
   cudaFree(d_B);

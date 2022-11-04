@@ -4,21 +4,22 @@
 #endif
 #include <iostream>
 #include "asserteq_func.hpp"
+#include "helper.hpp"
 
 template <typename DataType>
 void asserteq_cpu_func(void * buffers[], void * cl_args) {
-  //std::cerr << "ASSERTEQ CPU\n";
-  DataType val;
-  starpu_codelet_unpack_args(cl_args, &val);
-  int rows = STARPU_MATRIX_GET_NX(buffers[0]);
-  int cols = STARPU_MATRIX_GET_NY(buffers[0]);
-  int ld = STARPU_MATRIX_GET_LD(buffers[0]);
-  DataType *mat = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
-  for(int i = 0; i < cols; i++) {
-    for(int j = 0; j < rows; j++) {
-      if(mat[i*ld + j] != val) { printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i*ld + j], val); };
-    }
-  }
+	DataType val;
+	starpu_codelet_unpack_args(cl_args, &val);
+
+	auto M = as_matrix<DataType>(buffers[0]);
+
+	for(uint32_t i = 0; i < M.cols; i++) {
+		for(uint32_t j = 0; j < M.rows; j++) {
+			if(fabs(M.ptr[i * M.ld + j] - val) > 1e-6) {
+				printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, M.ptr[i * M.ld + j], val);
+			};
+		}
+	}
 }
 
 template void asserteq_cpu_func<float>(void * buffers[], void * cl_args);
@@ -26,27 +27,26 @@ template void asserteq_cpu_func<double>(void * buffers[], void * cl_args);
 
 #ifdef USE_CUDA
 template <typename DataType>
-__global__ void asserteq_kernel(DataType *mat, int rows, int cols, int ld, DataType val) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  int j = blockIdx.y * blockDim.y + threadIdx.y;
-  if(i < rows && j < cols) {
-    if(mat[j*ld + i] != val) { printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i*ld + j], val); }
-  }
+__global__ void asserteq_kernel(DataType *mat, uint32_t rows, uint32_t cols, uint32_t ld, DataType val) {
+	auto i = blockIdx.x * blockDim.x + threadIdx.x;
+	auto j = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if((i < rows) && (j < cols)) {
+		if(mat[j * ld + i] != val) { printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i * ld + j], val); }
+	}
 }
 
 template <typename DataType>
 void asserteq_cuda_func(void * buffers[], void * cl_args) {
-  //std::cerr << "ASSERTEQ CUDA\n";
-  DataType val;
-  starpu_codelet_unpack_args(cl_args, &val);
-  int rows = STARPU_MATRIX_GET_NX(buffers[0]);
-  int cols = STARPU_MATRIX_GET_NY(buffers[0]);
-  int ld = STARPU_MATRIX_GET_LD(buffers[0]);
-  DataType *mat = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
-  dim3 threadsPerBlock(32,32);
-  dim3 numBlocks((rows+threadsPerBlock.x-1)/threadsPerBlock.x, (cols+threadsPerBlock.y-1)/threadsPerBlock.y);
-  asserteq_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(mat, rows, cols, ld, val);
-  cudaStreamSynchronize(starpu_cuda_get_local_stream());
+	DataType val;
+	starpu_codelet_unpack_args(cl_args, &val);
+
+	auto M = as_matrix<DataType>(buffers[0]);
+
+	dim3 threadsPerBlock(32,32);
+	dim3 numBlocks(ceilDiv(M.rows, threadsPerBlock.x), ceilDiv(M.cols, threadsPerBlock.y));
+	asserteq_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(M.ptr, M.rows, M.cols, M.ld, val);
+	cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
 template void asserteq_cuda_func<float>(void * buffers[], void * cl_args);

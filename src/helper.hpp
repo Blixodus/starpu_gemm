@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "starpu.h"
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
@@ -28,11 +30,16 @@ constexpr MatrixInfo<T> as_matrix(void* ptr) {
     };
 }
 
+template <typename T>
+inline constexpr T ceilDiv(T a, T b) noexcept {
+    return (a + b - 1) / b;
+}
+
 template <typename Res, typename Base>
-Res safe_cast(Base val) {
+inline constexpr Res safe_cast(Base val) {
     return static_cast<Res>(val);
 }
 
-uint32_t stoui(const char* str) {
+inline uint32_t stoui(const char* str) {
     return safe_cast<uint32_t>(std::stoul(str));
 }

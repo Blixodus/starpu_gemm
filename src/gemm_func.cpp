@@ -13,7 +13,6 @@
 
 template <typename DataType>
 void gemm_cpu_func(void * buffers[], void * cl_args) {
-	//std::cerr << "GEMM CPU\n";
 	char transA, transB;
 	DataType alpha, beta;
 	starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -22,9 +21,9 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
 	auto B = as_matrix<DataType>(buffers[1]);
 	auto C = as_matrix<DataType>(buffers[2]);
 
-	uint32_t m = (transA == 'N') ? A.rows : A.cols;
-	uint32_t n = (transB == 'N') ? B.cols : B.rows;
-	uint32_t k = (transA == 'N') ? A.cols : A.rows;
+	auto m = (transA == 'N') ? A.rows : A.cols;
+	auto n = (transB == 'N') ? B.cols : B.rows;
+	auto k = (transA == 'N') ? A.cols : A.rows;
 
 	blas<DataType>::gemm(transA, transB, m, n, k, alpha, A.ptr, A.ld, B.ptr, B.ld, beta, C.ptr, C.ld);
 }
@@ -35,7 +34,6 @@ template void gemm_cpu_func<double>(void *buffers[], void *cl_args);
 #ifdef USE_CUDA
 template <typename DataType>
 void gemm_cuda_func(void * buffers[], void * cl_args) {
-	//std::cerr << "GEMM CUDA\n";
 	char transA, transB;
 	DataType alpha, beta;
 	starpu_codelet_unpack_args(cl_args, &transA, &transB, &alpha, &beta);
@@ -44,9 +42,9 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
 	auto B = as_matrix<DataType>(buffers[1]);
 	auto C = as_matrix<DataType>(buffers[2]);
 
-	uint32_t m = (transA == 'N') ? A.rows : A.cols;
-	uint32_t n = (transB == 'N') ? B.cols : B.rows;
-	uint32_t k = (transA == 'N') ? A.cols : A.rows;
+	auto m = (transA == 'N') ? A.rows : A.cols;
+	auto n = (transB == 'N') ? B.cols : B.rows;
+	auto k = (transA == 'N') ? A.cols : A.rows;
 	
 	cublas<DataType>::gemm(starpu_cublas_get_local_handle(), transA, transB, m, n, k, alpha, A.ptr, A.ld, B.ptr, B.ld, beta, C.ptr, C.ld);
   	cudaStreamSynchronize(starpu_cuda_get_local_stream());

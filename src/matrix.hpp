@@ -27,7 +27,7 @@ starpu_codelet gemm_cl = {
   .can_execute = can_execute,
   .cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
-  .cuda_funcs = { gemm_cuda_func<DataType> },
+  // .cuda_funcs = { gemm_cuda_func<DataType> },
   .cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
   .nbuffers = 3,
