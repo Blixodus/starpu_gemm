@@ -37,7 +37,7 @@ void accumulate_matrix_cuda(void * buffers[], void * cl_args) {
   DataType * dst = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
   int ld_src = STARPU_MATRIX_GET_LD(buffers[1]);
   DataType * src = (DataType*)STARPU_MATRIX_GET_PTR(buffers[1]);
-  cublasgeam(starpu_cublas_get_local_handle(), CUBLAS_OP_N, CUBLAS_OP_N, m, n, (DataType)1, dst, ld_dst, (DataType)1, src, ld_src, dst, ld_dst);
+  cublas<DataType>::geam(starpu_cublas_get_local_handle(), 'N', 'N', m, n, (DataType)1, dst, ld_dst, (DataType)1, src, ld_src, dst, ld_dst);
   cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 

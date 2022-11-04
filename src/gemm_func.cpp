@@ -25,7 +25,7 @@ void gemm_cpu_func(void * buffers[], void * cl_args) {
   DataType * B = (DataType*)STARPU_MATRIX_GET_PTR(buffers[1]);
   int ld_C = STARPU_MATRIX_GET_LD(buffers[2]);
   DataType * C = (DataType*)STARPU_MATRIX_GET_PTR(buffers[2]);
-  gemm(transA, transB, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
+  blas<DataType>::gemm(transA, transB, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
 }
 
 template void gemm_cpu_func<float>(void *buffers[], void *cl_args);
@@ -47,7 +47,7 @@ void gemm_cuda_func(void * buffers[], void * cl_args) {
   DataType * B = (DataType*)STARPU_MATRIX_GET_PTR(buffers[1]);
   int ld_C = STARPU_MATRIX_GET_LD(buffers[2]);
   DataType * C = (DataType*)STARPU_MATRIX_GET_PTR(buffers[2]);
-  cublasgemm(starpu_cublas_get_local_handle(), convertToCublas(transA), convertToCublas(transB), m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
+  cublas<DataType>::gemm(starpu_cublas_get_local_handle(), transA, transB, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C);
   //cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 

@@ -32,7 +32,7 @@ void bzero_matrix_cuda(void * buffers[], void * cl_args) {
   int ld = STARPU_MATRIX_GET_LD(buffers[0]);
   DataType * mat = (DataType*)STARPU_MATRIX_GET_PTR(buffers[0]);
   DataType alpha = 0, beta = 0;
-  cublasgeam(starpu_cublas_get_local_handle(), CUBLAS_OP_N, CUBLAS_OP_N, m, n, (DataType)0, mat, ld, (DataType)0, mat, ld, mat, ld);
+  cublas<DataType>::geam(starpu_cublas_get_local_handle(), 'N', 'N', m, n, (DataType)0, mat, ld, (DataType)0, mat, ld, mat, ld);
   cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
