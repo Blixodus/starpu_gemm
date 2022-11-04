@@ -35,20 +35,6 @@ void test_gemm(uint32_t m, uint32_t n, uint32_t k, uint32_t block_size, std::ofs
   A.fill(1);
   B.fill(1);
   C.fill(0);
-
-  
-  A.print('A');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  B.print('B');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  C.print('C');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
   
   auto start = std::chrono::high_resolution_clock::now();
   
@@ -62,14 +48,7 @@ void test_gemm(uint32_t m, uint32_t n, uint32_t k, uint32_t block_size, std::ofs
   
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
   
-  C.assertEq(static_cast<float>(k));
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  sleep(2);
-  C.print('C');
-  starpu_mpi_barrier(MPI_COMM_WORLD);
-  starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  
+  C.assertEq(static_cast<float>(k));  
 }
 
 int main(int argc, char ** argv) {
@@ -110,7 +89,6 @@ int main(int argc, char ** argv) {
 #ifdef USE_CUDA
   starpu_cublas_init();
 #endif
-  //test_gemm(1, 1, 2, 1, resultFile);
   
   for(uint32_t b_exp = b_min; b_exp <= b_max; b_exp++) {
     const uint32_t block_size = 1<<b_exp;
