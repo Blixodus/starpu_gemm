@@ -36,7 +36,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   B.fill(1);
   C.fill(0);
 
-  /*
+  
   A.print('A');
   starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
@@ -49,7 +49,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
   sleep(2);
-  */
+  
   auto start = std::chrono::high_resolution_clock::now();
   
   Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
@@ -61,7 +61,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   std::cerr << "StarPU -- Performance : " << 2L * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
   
   //resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" << block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
-  /*
+  
   C.assertEq(k);
   starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
@@ -69,7 +69,7 @@ void test_gemm(int m, int n, int k, int block_size, std::ofstream& resultFile) {
   C.print('C');
   starpu_mpi_barrier(MPI_COMM_WORLD);
   starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-  */
+  
 }
 
 int main(int argc, char ** argv) {
