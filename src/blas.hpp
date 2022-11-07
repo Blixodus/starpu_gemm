@@ -1,21 +1,24 @@
 #pragma once
 
+#include "helper.hpp"
+
+
 template <typename DataType>
 struct blas {
 	static void gemm(
 		char transA,
 		char transB,
-		uint32_t m,
-		uint32_t n,
-		uint32_t k,
+		u32 m,
+		u32 n,
+		u32 k,
 		DataType alpha,
 		DataType* A,
-		uint32_t lda,
+		u32 lda,
 		DataType* B,
-		uint32_t ldb,
+		u32 ldb,
 		DataType beta,
 		DataType* C,
-		uint32_t ldc
+		u32 ldc
 	);
 };
 
@@ -26,33 +29,33 @@ struct cublas {
 		cublasHandle_t handle,
 		char transa,
 		char transb,
-		uint32_t m,
-		uint32_t n,
-		uint32_t k,
+		u32 m,
+		u32 n,
+		u32 k,
 		const DataType alpha,
 		const DataType* A,
-		uint32_t lda,
+		u32 lda,
 		const DataType* B,
-		uint32_t ldb,
+		u32 ldb,
 		const DataType beta,
 		DataType* C,
-		uint32_t ldc
+		u32 ldc
 	);
 
 	static void geam(
 		cublasHandle_t handle,
 		char transa,
 		char transb,
-		uint32_t m,
-		uint32_t n,
+		u32 m,
+		u32 n,
 		const DataType alpha,
 		const DataType* A,
-		uint32_t lda,
+		u32 lda,
 		const DataType beta,
 		const DataType* B,
-		uint32_t ldb,
+		u32 ldb,
 		DataType* C,
-		uint32_t ldc
+		u32 ldc
 	);
 };
 #endif

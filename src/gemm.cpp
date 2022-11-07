@@ -27,7 +27,7 @@
 #include "matrix.hpp"
 #include "print_func.hpp"
 
-void test_gemm(uint32_t m, uint32_t n, uint32_t k, uint32_t block_size, std::ofstream& resultFile) {
+void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu
 			  << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
 
@@ -59,13 +59,13 @@ int main(int argc, char** argv) {
 		std::cerr << "Usage : " << argv[0] << " [exp] [k_min] [k_max] [bs_min] [bs_max]" << std::endl;
 		return 1;
 	}
-	const uint32_t exp = stoui(argv[1]);
-	const uint32_t k_min = stoui(argv[2]);
-	const uint32_t k_max = std::min(stoui(argv[3]), exp);
-	const uint32_t b_min = stoui(argv[4]);
-	const uint32_t b_max = std::min(stoui(argv[5]), exp);
-	const uint32_t m = 1 << exp;
-	const uint32_t n = 1 << exp;
+	const u32 exp = stoui(argv[1]);
+	const u32 k_min = stoui(argv[2]);
+	const u32 k_max = std::min(stoui(argv[3]), exp);
+	const u32 b_min = stoui(argv[4]);
+	const u32 b_max = std::min(stoui(argv[5]), exp);
+	const u32 m = 1 << exp;
+	const u32 n = 1 << exp;
 
 	std::ofstream resultFile;
 	/*
@@ -97,10 +97,10 @@ int main(int argc, char** argv) {
 	starpu_cublas_init();
 #endif
 
-	for (uint32_t b_exp = b_min; b_exp <= b_max; b_exp++) {
-		const uint32_t block_size = 1 << b_exp;
-		for (uint32_t k_exp = k_min; k_exp <= k_max; k_exp++) {
-			const uint32_t k = 1 << k_exp;
+	for (u32 b_exp = b_min; b_exp <= b_max; b_exp++) {
+		const u32 block_size = 1 << b_exp;
+		for (u32 k_exp = k_min; k_exp <= k_max; k_exp++) {
+			const u32 k = 1 << k_exp;
 			test_gemm(m, n, k, block_size, resultFile);
 		}
 	}

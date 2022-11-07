@@ -6,16 +6,17 @@
 #include "helper.hpp"
 #include "print_func.hpp"
 
+
 template <typename DataType>
 void print_cpu_func(void* buffers[], void* cl_args) {
 	char c;
-	uint32_t row, col, bs;
+	u32 row, col, bs;
 	starpu_codelet_unpack_args(cl_args, &c, &row, &col, &bs);
 
 	auto M = as_matrix<DataType>(buffers[0]);
 
-	for (uint32_t i = 0; i < M.cols; i++) {
-		for (uint32_t j = 0; j < M.rows; j++) {
+	for (u32 i = 0; i < M.cols; i++) {
+		for (u32 j = 0; j < M.rows; j++) {
 			printf("%c : %u, %u, %u, %f\n", c, i + row * bs, j + col * bs, M.ld, M.ptr[i * M.ld + j]);
 		}
 	}
@@ -28,13 +29,13 @@ template void print_cpu_func<double>(void* buffers[], void* cl_args);
 template <typename DataType>
 __global__ void print_kernel(
 	DataType* mat,
-	uint32_t rows,
-	uint32_t cols,
-	uint32_t ld,
+	u32 rows,
+	u32 cols,
+	u32 ld,
 	char c,
-	uint32_t row,
-	uint32_t col,
-	uint32_t bs
+	u32 row,
+	u32 col,
+	u32 bs
 ) {
 	auto i = blockIdx.x * blockDim.x + threadIdx.x;
 	auto j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -46,7 +47,7 @@ __global__ void print_kernel(
 template <typename DataType>
 void print_cuda_func(void* buffers[], void* cl_args) {
 	char c;
-	uint32_t row, col, bs;
+	u32 row, col, bs;
 	starpu_codelet_unpack_args(cl_args, &c, &row, &col, &bs);
 
 	auto M = as_matrix<DataType>(buffers[0]);

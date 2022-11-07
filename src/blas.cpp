@@ -43,17 +43,17 @@ template <typename DataType>
 void blas<DataType>::gemm(
 	char transA,
 	char transB,
-	uint32_t m,
-	uint32_t n,
-	uint32_t k,
+	u32 m,
+	u32 n,
+	u32 k,
 	DataType alpha,
 	DataType* A,
-	uint32_t lda,
+	u32 lda,
 	DataType* B,
-	uint32_t ldb,
+	u32 ldb,
 	DataType beta,
 	DataType* C,
-	uint32_t ldc
+	u32 ldc
 ) {
 	auto m_cast = static_cast<int>(m);
 	auto n_cast = static_cast<int>(n);
@@ -90,17 +90,17 @@ void cublas<DataType>::gemm(
 	cublasHandle_t handle,
 	char transa,
 	char transb,
-	uint32_t m,
-	uint32_t n,
-	uint32_t k,
+	u32 m,
+	u32 n,
+	u32 k,
 	const DataType alpha,
 	const DataType* A,
-	uint32_t lda,
+	u32 lda,
 	const DataType* B,
-	uint32_t ldb,
+	u32 ldb,
 	const DataType beta,
 	DataType* C,
-	uint32_t ldc
+	u32 ldc
 ) {
 	cublasStatus_t stat;
 
@@ -136,16 +136,16 @@ void cublas<DataType>::geam(
 	cublasHandle_t handle,
 	char transa,
 	char transb,
-	uint32_t m,
-	uint32_t n,
+	u32 m,
+	u32 n,
 	const DataType alpha,
 	const DataType* A,
-	uint32_t lda,
+	u32 lda,
 	const DataType beta,
 	const DataType* B,
-	uint32_t ldb,
+	u32 ldb,
 	DataType* C,
-	uint32_t ldc
+	u32 ldc
 ) {
 	cublasStatus_t stat;
 

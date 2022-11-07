@@ -1,5 +1,6 @@
 #pragma once
 
+#include "print_func.hpp"
 #include "helper.hpp"
 
 static int enable_cpu = ENABLE;
@@ -120,10 +121,10 @@ inline Int ceil_div(Int a, Int b) {
 
 template <typename DataType>
 struct MatrixData {
-	uint32_t row_blocks, col_blocks;
+	u32 row_blocks, col_blocks;
 	std::vector<starpu_data_handle_t> data_handle;
 
-	MatrixData(uint32_t rows, uint32_t cols, uint32_t block_size)
+	MatrixData(u32 rows, u32 cols, u32 block_size)
 		: row_blocks(ceil_div(rows, block_size)),
 		  col_blocks(ceil_div(cols, block_size)),
 		  data_handle(row_blocks * col_blocks) {
@@ -135,8 +136,8 @@ struct MatrixData {
 		auto row_final = (rows % block_size) ? rows % block_size : block_size;
 		auto col_final = (cols % block_size) ? cols % block_size : block_size;
 
-		for (uint32_t i = 0; i < row_blocks; i++) {
-			for (uint32_t j = 0; j < col_blocks; j++) {
+		for (u32 i = 0; i < row_blocks; i++) {
+			for (u32 j = 0; j < col_blocks; j++) {
 				auto& handle = get(i, j);
 
 				auto rows_block = (i == row_blocks - 1) ? row_final : block_size;
@@ -158,25 +159,25 @@ struct MatrixData {
 		}
 	}
 
-	starpu_data_handle_t& get(uint32_t i, uint32_t j) {
+	starpu_data_handle_t& get(u32 i, u32 j) {
 		return data_handle[i + j * row_blocks];
 	}
 };
 
 template <typename DataType>
 struct Matrix {
-	uint32_t rows, cols;
-	uint32_t block_size;
+	u32 rows, cols;
+	u32 block_size;
 	MatrixData<DataType> data_handle;
 
 	Matrix() = default;
 
-	Matrix(uint32_t rows_, uint32_t cols_, uint32_t block_size_)
+	Matrix(u32 rows_, u32 cols_, u32 block_size_)
 		: rows(rows_), cols(cols_), block_size(block_size_), data_handle(rows, cols, block_size){};
 
 	void fill(DataType e) {
-		for (uint32_t i = 0; i < data_handle.row_blocks; i++) {
-			for (uint32_t j = 0; j < data_handle.col_blocks; j++) {
+		for (u32 i = 0; i < data_handle.row_blocks; i++) {
+			for (u32 j = 0; j < data_handle.col_blocks; j++) {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
@@ -192,8 +193,8 @@ struct Matrix {
 	}
 
 	void print(char c) {
-		for (uint32_t i = 0; i < data_handle.row_blocks; i++) {
-			for (uint32_t j = 0; j < data_handle.col_blocks; j++) {
+		for (u32 i = 0; i < data_handle.row_blocks; i++) {
+			for (u32 j = 0; j < data_handle.col_blocks; j++) {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
@@ -210,8 +211,8 @@ struct Matrix {
 	}
 
 	void assertEq(const DataType val) {
-		for (uint32_t i = 0; i < data_handle.row_blocks; i++) {
-			for (uint32_t j = 0; j < data_handle.col_blocks; j++) {
+		for (u32 i = 0; i < data_handle.row_blocks; i++) {
+			for (u32 j = 0; j < data_handle.col_blocks; j++) {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
@@ -241,16 +242,16 @@ struct Matrix {
 		assert(A.block_size == B.block_size && B.block_size == C.block_size);
 
 #if ENABLE_REDUX != 0
-		for (uint32_t i = 0; i < C.data_handle.row_blocks; i++) {
-			for (uint32_t j = 0; j < C.data_handle.col_blocks; j++) {
+		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
+			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
 				starpu_data_set_reduction_methods(C.data_handle.get(i, j), &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
 			}
 		}
 #endif
 
-		for (uint32_t i = 0; i < C.data_handle.row_blocks; i++) {
-			for (uint32_t j = 0; j < C.data_handle.col_blocks; j++) {
-				for (uint32_t k = 0; k < A.data_handle.col_blocks; k++) {
+		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
+			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
+				for (u32 k = 0; k < A.data_handle.col_blocks; k++) {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
 					auto C_sub_handle = C.data_handle.get(i, j);

@@ -7,6 +7,7 @@
 #include "fill_func.hpp"
 #include "helper.hpp"
 
+
 template <typename DataType>
 void fill_cpu_func(void* buffers[], void* cl_args) {
 	DataType e;
@@ -14,8 +15,8 @@ void fill_cpu_func(void* buffers[], void* cl_args) {
 
 	auto M = as_matrix<DataType>(buffers[0]);
 
-	for (uint32_t i = 0; i < M.cols; i++) {
-		for (uint32_t j = 0; j < M.rows; j++) {
+	for (u32 i = 0; i < M.cols; i++) {
+		for (u32 j = 0; j < M.rows; j++) {
 			M.ptr[i * M.ld + j] = e;
 		}
 	}
@@ -26,7 +27,7 @@ template void fill_cpu_func<double>(void* buffers[], void* cl_args);
 
 #ifdef USE_CUDA
 template <typename DataType>
-__global__ void fill_kernel(DataType* mat, uint32_t rows, uint32_t cols, uint32_t ld, DataType val) {
+__global__ void fill_kernel(DataType* mat, u32 rows, u32 cols, u32 ld, DataType val) {
 	auto i = blockIdx.x * blockDim.x + threadIdx.x;
 	auto j = blockIdx.y * blockDim.y + threadIdx.y;
 

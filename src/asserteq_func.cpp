@@ -13,8 +13,8 @@ void asserteq_cpu_func(void* buffers[], void* cl_args) {
 
 	auto M = as_matrix<DataType>(buffers[0]);
 
-	for (uint32_t i = 0; i < M.cols; i++) {
-		for (uint32_t j = 0; j < M.rows; j++) {
+	for (u32 i = 0; i < M.cols; i++) {
+		for (u32 j = 0; j < M.rows; j++) {
 			if (fabs(M.ptr[i * M.ld + j] - val) > 1e-6) {
 				printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, M.ptr[i * M.ld + j], val);
 			};
@@ -27,7 +27,7 @@ template void asserteq_cpu_func<double>(void* buffers[], void* cl_args);
 
 #ifdef USE_CUDA
 template <typename DataType>
-__global__ void asserteq_kernel(DataType* mat, uint32_t rows, uint32_t cols, uint32_t ld, DataType val) {
+__global__ void asserteq_kernel(DataType* mat, u32 rows, u32 cols, u32 ld, DataType val) {
 	auto i = blockIdx.x * blockDim.x + threadIdx.x;
 	auto j = blockIdx.y * blockDim.y + threadIdx.y;
 

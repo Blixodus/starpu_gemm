@@ -14,7 +14,7 @@ void bzero_matrix_cpu(void* buffers[], void* cl_args) {
 	// std::cout << "BZERO CPU" << std::endl;
 	auto M = as_matrix<DataType>(buffers[0]);
 
-	for (uint32_t j = 0; j < M.cols; j++) {
+	for (u32 j = 0; j < M.cols; j++) {
 		memset(&M.ptr[M.ld * j], 0, M.rows * sizeof(DataType));
 	}
 }

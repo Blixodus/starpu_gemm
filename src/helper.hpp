@@ -1,8 +1,22 @@
 #pragma once
 
 #include <string>
-
 #include "starpu.h"
+
+// newtypes
+
+using u8 	= uint8_t;
+using u16 	= uint16_t;
+using u32 	= uint32_t;
+using u64 	= uint64_t;
+
+using i8 	= int8_t;
+using i16 	= int16_t;
+using i32 	= int32_t;
+using i64 	= int64_t;
+
+using f32 	= float;
+using f64 	= double;
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
 #define STARPU_MATRIX_ROWS(x) STARPU_MATRIX_GET_NX((x))
@@ -10,10 +24,10 @@
 
 template <typename T>
 struct MatrixInfo {
-	uint32_t ld, rows, cols;
+	u32 ld, rows, cols;
 	T* ptr;
 
-	inline constexpr T at(uint32_t row, uint32_t col) const noexcept {
+	inline constexpr T at(u32 row, u32 col) const noexcept {
 		return ptr[row + col * ld];
 	}
 };
@@ -39,6 +53,6 @@ inline constexpr Res safe_cast(Base val) {
 	return static_cast<Res>(val);
 }
 
-inline uint32_t stoui(const char* str) {
-	return safe_cast<uint32_t>(std::stoul(str));
+inline u32 stoui(const char* str) {
+	return safe_cast<u32>(std::stoul(str));
 }

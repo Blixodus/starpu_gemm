@@ -14,8 +14,8 @@ void accumulate_matrix_cpu(void* buffers[], void* cl_args) {
 	auto dst = as_matrix<DataType>(buffers[0]);
 	auto src = as_matrix<DataType>(buffers[1]);
 
-	for (uint32_t j = 0; j < dst.cols; j++) {
-		for (uint32_t i = 0; i < dst.rows; i++) {
+	for (u32 j = 0; j < dst.cols; j++) {
+		for (u32 i = 0; i < dst.rows; i++) {
 			dst.ptr[i + dst.ld * j] = dst.ptr[i + dst.ld * j] + src.ptr[i + src.ld * j];
 		}
 	}
