@@ -38,6 +38,12 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
+  A.print('A');
+  B.print('B');
+  C.print('C');
+
+	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
+
 	auto start = std::chrono::high_resolution_clock::now();
 
 	Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
@@ -51,6 +57,10 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	// block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
 	C.assertEq(static_cast<float>(k));
+
+	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
+
+  C.print('C');
 }
 
 int main(int argc, char** argv) {
