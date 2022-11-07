@@ -50,7 +50,7 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	// resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" <<
 	// block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
-	// C.assertEq(static_cast<float>(k));
+	C.assertEq(static_cast<float>(k));
 }
 
 int main(int argc, char** argv) {
