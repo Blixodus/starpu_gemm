@@ -139,7 +139,7 @@ starpu_codelet make_asserteq_cl() {
 		.cpu_funcs = {asserteq_cpu_func<DataType>},
 #ifdef USE_CUDA
 		.cuda_funcs = {asserteq_cuda_func<DataType>},
-	.cuda_flags = { STARPU_CUDA_ASYNC },
+		.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
 		.nbuffers = 1,
 		.modes = {STARPU_R},
