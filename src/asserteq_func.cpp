@@ -50,7 +50,6 @@ void asserteq_cuda_func(void* buffers[], void* cl_args) {
 	asserteq_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(
 		M.ptr, M.rows, M.cols, M.ld, val
 	);
-	cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 
 template void asserteq_cuda_func<float>(void* buffers[], void* cl_args);

@@ -1,10 +1,20 @@
 #pragma once
 
-#include "print_func.hpp"
+#include <vector>
+#include "starpu_mpi.h"
+
 #include "helper.hpp"
 
-static int enable_cpu = ENABLE;
-static int enable_gpu = ENABLE;
+#include "print_func.hpp"
+#include "gemm_func.hpp"
+#include "bzero_func.hpp"
+#include "accumulate_func.hpp"
+#include "fill_func.hpp"
+#include "asserteq_func.hpp"
+
+static constexpr int enable_cpu = 1;
+static constexpr int enable_gpu = 0;
+
 static int can_execute(unsigned workerid, struct starpu_task* task, unsigned nimpl) {
 	if (starpu_worker_get_type(safe_cast<int>(workerid)) == STARPU_CPU_WORKER) {
 		return enable_cpu;
@@ -13,111 +23,133 @@ static int can_execute(unsigned workerid, struct starpu_task* task, unsigned nim
 	return enable_gpu;
 }
 
-static struct starpu_perfmodel gemm_perf_model_float = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "gemm_perf_model_float"};
-
-static struct starpu_perfmodel gemm_perf_model_double = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "gemm_perf_model_double"};
-
 template <typename DataType>
-starpu_codelet gemm_cl = {
-	.can_execute = can_execute,
-	.cpu_funcs = {gemm_cpu_func<DataType>},
+starpu_codelet make_gemm_cl() {
+	static struct starpu_perfmodel model = {
+		.type = STARPU_REGRESSION_BASED,
+		.symbol = __PRETTY_FUNCTION__
+	};
+
+	return {
+		.can_execute = can_execute,
+		.cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
-	// .cuda_funcs = { gemm_cuda_func<DataType> },
-	.cuda_flags = {STARPU_CUDA_ASYNC},
+		.cuda_funcs = { gemm_cuda_func<DataType> },
+		.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
-	.nbuffers = 3,
+		.nbuffers = 3,
 #if ENABLE_REDUX != 0
-	.modes = {STARPU_R, STARPU_R, starpu_data_access_mode(STARPU_RW | STARPU_COMMUTE)},
+		.modes = {STARPU_R, STARPU_R, STARPU_RW | STARPU_COMMUTE},
 #else
-	.modes = {STARPU_R, STARPU_R, STARPU_RW},
+		.modes = {STARPU_R, STARPU_R, STARPU_RW},
 #endif
-	.model = (std::is_same_v<DataType, float>) ? &gemm_perf_model_float : &gemm_perf_model_double,
-};
+		.model = &model,
+	};
+}
 
 template <typename DataType>
-starpu_codelet bzero_matrix_cl = {
-	.can_execute = can_execute,
-	.cpu_funcs = {bzero_matrix_cpu<DataType>},
-#ifdef USE_CUDAd
-	.cuda_funcs = {bzero_matrix_cuda<DataType>},
-#endif
-	.nbuffers = 1,
-	.modes = {STARPU_W},
-};
-
-static struct starpu_perfmodel accumulate_perf_model_float = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "accumulate_perf_model_float"};
-
-static struct starpu_perfmodel accumulate_perf_model_double = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "accumulate_perf_model_double"};
+static auto gemm_cl = make_gemm_cl<DataType>();
 
 template <typename DataType>
-starpu_codelet accumulate_matrix_cl = {
-	.can_execute = can_execute,
-	.cpu_funcs = {accumulate_matrix_cpu<DataType>},
+starpu_codelet make_bzero_matrix_cl() {
+	static struct starpu_perfmodel model = {
+		.type = STARPU_REGRESSION_BASED,
+		.symbol = __PRETTY_FUNCTION__
+	};
+
+	return {
+		.can_execute = can_execute,
+		.cpu_funcs = { bzero_matrix_cpu<DataType> },
 #ifdef USE_CUDA
-	.cuda_funcs = {accumulate_matrix_cuda<DataType>},
+		.cuda_funcs = { bzero_matrix_cuda<DataType> },
 #endif
-	.nbuffers = 2,
-	.modes = {starpu_data_access_mode(STARPU_RW | STARPU_COMMUTE), STARPU_R},
-	.model = (std::is_same_v<DataType, float>) ? &accumulate_perf_model_float
-											   : &accumulate_perf_model_double,
-};
-
-static struct starpu_perfmodel fill_perf_model_float = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "fill_perf_model_float"};
-
-static struct starpu_perfmodel fill_perf_model_double = {
-	.type = STARPU_REGRESSION_BASED,
-	.symbol = "fill_perf_model_double"};
+		.nbuffers = 1,
+		.modes = { STARPU_W },
+		.model = &model,
+	};
+}
 
 template <typename DataType>
-starpu_codelet fill_cl = {
-	.cpu_funcs = {fill_cpu_func<DataType>},
-#ifdef USE_CUDA
-//.cuda_funcs = { fill_cuda_func<DataType> },
-//.cuda_flags = { STARPU_CUDA_ASYNC },
-#endif
-	.nbuffers = 1,
-	.modes = {STARPU_W},
-	.model = (std::is_same_v<DataType, float>) ? &fill_perf_model_float : &fill_perf_model_double,
-};
+static auto bzero_matrix_cl = make_bzero_matrix_cl<DataType>();
 
 template <typename DataType>
-starpu_codelet print_cl = {
-	.cpu_funcs = {print_cpu_func<DataType>},
+starpu_codelet make_accumulate_matrix_cl() {
+	static struct starpu_perfmodel model = {
+		.type = STARPU_REGRESSION_BASED,
+		.symbol = __PRETTY_FUNCTION__
+	};
+
+	return {
+		.can_execute = can_execute,
+		.cpu_funcs = { accumulate_matrix_cpu<DataType> },
 #ifdef USE_CUDA
-	.cuda_funcs = {print_cuda_func<DataType>},
-	.cuda_flags = {STARPU_CUDA_ASYNC},
+		.cuda_funcs = { accumulate_matrix_cuda<DataType> },
 #endif
-	.nbuffers = 1,
-	.modes = {STARPU_R},
-};
+		.nbuffers = 2,
+		.modes = { STARPU_RW | STARPU_COMMUTE, STARPU_R },
+		.model = &model,
+	};
+}
 
 template <typename DataType>
-starpu_codelet asserteq_cl = {
-	.cpu_funcs = {asserteq_cpu_func<DataType>},
+static auto accumulate_matrix_cl = make_accumulate_matrix_cl<DataType>();
+
+template <typename DataType>
+starpu_codelet make_fill_cl() {
+	static struct starpu_perfmodel model = {
+		.type = STARPU_REGRESSION_BASED,
+		.symbol = __PRETTY_FUNCTION__
+	};
+
+	return {
+		.can_execute = can_execute,
+		.cpu_funcs = { fill_cpu_func<DataType> },
 #ifdef USE_CUDA
-	.cuda_funcs = {asserteq_cuda_func<DataType>},
-//.cuda_flags = { STARPU_CUDA_ASYNC },
+		.cuda_funcs = { fill_cuda_func<DataType> },
+		.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
-	.nbuffers = 1,
-	.modes = {STARPU_R},
-};
+		.nbuffers = 1,
+		.modes = { STARPU_W },
+		.model = &model,
+	};
+}
+
+template <typename DataType>
+static auto fill_cl = make_fill_cl<DataType>();
+
+template <typename DataType>
+starpu_codelet make_print_cl() {
+	return {
+		.cpu_funcs = {print_cpu_func<DataType>},
+#ifdef USE_CUDA
+		.cuda_funcs = {print_cuda_func<DataType>},
+		.cuda_flags = {STARPU_CUDA_ASYNC},
+#endif
+		.nbuffers = 1,
+		.modes = {STARPU_R},
+	};
+}
+
+template <typename DataType>
+static auto print_cl = make_print_cl<DataType>();
+
+template <typename DataType>
+starpu_codelet make_asserteq_cl() {
+	return {
+		.cpu_funcs = {asserteq_cpu_func<DataType>},
+#ifdef USE_CUDA
+		.cuda_funcs = {asserteq_cuda_func<DataType>},
+	.cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
+		.nbuffers = 1,
+		.modes = {STARPU_R},
+	};
+}
+
+template <typename DataType>
+static auto asserteq_cl = make_asserteq_cl<DataType>();
 
 static int mpi_tag = 0;
-
-template <typename Int>
-inline Int ceil_div(Int a, Int b) {
-	return (a + b - 1) / b;
-}
 
 template <typename DataType>
 struct MatrixData {
@@ -125,8 +157,8 @@ struct MatrixData {
 	std::vector<starpu_data_handle_t> data_handle;
 
 	MatrixData(u32 rows, u32 cols, u32 block_size)
-		: row_blocks(ceil_div(rows, block_size)),
-		  col_blocks(ceil_div(cols, block_size)),
+		: row_blocks(ceilDiv(rows, block_size)),
+		  col_blocks(ceilDiv(cols, block_size)),
 		  data_handle(row_blocks * col_blocks) {
 		int rank, size;
 
@@ -146,6 +178,7 @@ struct MatrixData {
 				starpu_matrix_data_register(
 					&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType)
 				);
+
 				starpu_mpi_data_register(handle, mpi_tag++, static_cast<int>(i + j) % size);
 				// std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j
 				// << " " << rows_block << " " << cols_block << std::endl;
@@ -181,8 +214,10 @@ struct Matrix {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
-					MPI_COMM_WORLD, &fill_cl<DataType>, STARPU_VALUE, &e, sizeof(e), STARPU_W,
-					handle, NULL
+					MPI_COMM_WORLD, &fill_cl<DataType>,
+					STARPU_VALUE, &e, sizeof(e),
+					STARPU_W, handle,
+					NULL
 				);
 
 				if (err) {
@@ -198,9 +233,13 @@ struct Matrix {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
-					MPI_COMM_WORLD, &print_cl<DataType>, STARPU_VALUE, &c, sizeof(c), STARPU_VALUE,
-					&i, sizeof(i), STARPU_VALUE, &j, sizeof(j), STARPU_VALUE, &block_size,
-					sizeof(block_size), STARPU_R, handle, NULL
+					MPI_COMM_WORLD, &print_cl<DataType>,
+					STARPU_VALUE, &c, sizeof(c),
+					STARPU_VALUE, &i, sizeof(i),
+					STARPU_VALUE, &j, sizeof(j),
+					STARPU_VALUE, &block_size, sizeof(block_size),
+					STARPU_R, handle,
+					NULL
 				);
 
 				if (err) {
@@ -216,8 +255,10 @@ struct Matrix {
 				auto handle = data_handle.get(i, j);
 
 				int err = starpu_mpi_task_insert(
-					MPI_COMM_WORLD, &asserteq_cl<DataType>, STARPU_VALUE, &val, sizeof(val),
-					STARPU_R, handle, NULL
+					MPI_COMM_WORLD, &asserteq_cl<DataType>,
+					STARPU_VALUE, &val, sizeof(val),
+					STARPU_R, handle,
+					NULL
 				);
 
 				if (err) {
@@ -241,13 +282,13 @@ struct Matrix {
 		assert(A.cols == B.rows);
 		assert(A.block_size == B.block_size && B.block_size == C.block_size);
 
-#if ENABLE_REDUX != 0
+	#if ENABLE_REDUX != 0
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
 				starpu_data_set_reduction_methods(C.data_handle.get(i, j), &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
 			}
 		}
-#endif
+	#endif
 
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
@@ -256,23 +297,27 @@ struct Matrix {
 					auto B_sub_handle = B.data_handle.get(k, j);
 					auto C_sub_handle = C.data_handle.get(i, j);
 
-					int err = starpu_mpi_task_insert(
-						MPI_COMM_WORLD, &gemm_cl<DataType>, STARPU_VALUE, &transA, sizeof(transA),
-						STARPU_VALUE, &transB, sizeof(transB), STARPU_VALUE, &alpha, sizeof(alpha),
-						STARPU_VALUE, &beta, sizeof(beta), STARPU_R, A_sub_handle, STARPU_R,
+					auto err = starpu_mpi_task_insert(
+						MPI_COMM_WORLD, &gemm_cl<DataType>,
+						STARPU_VALUE, &transA, sizeof(transA),
+						STARPU_VALUE, &transB, sizeof(transB),
+						STARPU_VALUE, &alpha, sizeof(alpha),
+						STARPU_VALUE, &beta, sizeof(beta),
+						STARPU_R, A_sub_handle, STARPU_R,
 						B_sub_handle,
-#if ENABLE_REDUX != 0
+	#if ENABLE_REDUX != 0
 						STARPU_MPI_REDUX, C_sub_handle,
-#else
+	#else
 						STARPU_RW, C_sub_handle,
-#endif
+	#endif
 						STARPU_FLOPS,
 						double(
 							2L * starpu_matrix_get_nx(C_sub_handle) *
 							starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)
 						),
-						0
+						NULL
 					);
+
 					if (err) {
 						throw std::exception();
 					}

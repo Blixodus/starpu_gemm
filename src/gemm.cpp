@@ -8,8 +8,7 @@
 #include <numeric>
 #include <vector>
 
-#define ENABLE 1
-#define DISABLE 0
+
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
 #define ENABLE_REDUX 1

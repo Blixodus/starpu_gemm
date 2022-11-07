@@ -2,7 +2,6 @@
 
 #include "helper.hpp"
 
-
 template <typename DataType>
 struct blas {
 	static void gemm(
