@@ -13,7 +13,7 @@
 #include "asserteq_func.hpp"
 
 static constexpr int enable_cpu = 1;
-static constexpr int enable_gpu = 0;
+static constexpr int enable_gpu = 1;
 
 static int can_execute(unsigned workerid, struct starpu_task* task, unsigned nimpl) {
 	if (starpu_worker_get_type(safe_cast<int>(workerid)) == STARPU_CPU_WORKER) {
