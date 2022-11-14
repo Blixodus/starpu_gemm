@@ -6,6 +6,7 @@
 #include "asserteq_func.hpp"
 #include "../util/helper.hpp"
 
+#include <cmath>
 
 template <typename DataType>
 void asserteq_cpu_func(void* buffers[], void* cl_args) {

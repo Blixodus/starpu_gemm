@@ -145,14 +145,14 @@ find_package(LAPACKE REQUIRED)
 # -------------
 
 set( gemmlib_srcs
-  src/fns/blas.cpp
-  src/fns/gemm_func.cpp
-  src/fns/bzero_func.cpp
-  src/fns/accumulate_func.cpp
-  src/fns/fill_func.cpp
-  src/fns/print_func.cpp
-  src/fns/cublas_perf.cpp
-  src/fns/asserteq_func.cpp
+  src/matrix/blas.cpp
+  src/matrix/gemm_func.cpp
+  src/matrix/bzero_func.cpp
+  src/matrix/accumulate_func.cpp
+  src/matrix/fill_func.cpp
+  src/matrix/print_func.cpp
+  src/matrix/cublas_perf.cpp
+  src/matrix/asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )
@@ -195,14 +195,20 @@ install(TARGETS gemmlib
 add_executable(gemm src/gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
 
+add_executable(getm src/getm.cpp)
+target_link_libraries(getm PRIVATE gemmlib)
+
 if(ENABLE_CUDA)
   target_link_libraries(gemm PRIVATE CUDA::cublas)
+  target_link_libraries(getm PRIVATE CUDA::cublas)
 endif()
 if (ENABLE_MPI)
   target_link_libraries(gemm PUBLIC MPI::MPI_CXX)
+  target_link_libraries(getm PUBLIC MPI::MPI_CXX)
 endif (ENABLE_MPI)
 if (ENABLE_STARPU)
   target_link_libraries(gemm PUBLIC MORSE::STARPU)
+  target_link_libraries(getm PUBLIC MORSE::STARPU)
 endif (ENABLE_STARPU)
 
 install(TARGETS gemm RUNTIME DESTINATION bin)
