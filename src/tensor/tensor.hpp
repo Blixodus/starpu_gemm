@@ -1,6 +1,8 @@
 #ifndef TENSOR_HPP
 #define TENSOR_HPP
 
+#include "../util/helper.hpp"
+
 static struct starpu_perfmodel tensor_add_perf_model_float = {
   .type = STARPU_REGRESSION_BASED,
   .symbol = "tensor_add_perf_model_float"
@@ -14,7 +16,7 @@ static struct starpu_perfmodel tensor_add_perf_model_double = {
 template <typename DataType>
 starpu_codelet tensor_add_cl = {
   .cpu_funcs = { tensor_add_cpu_func<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   //.cuda_funcs = { tensor_add_cuda_func<DataType> },
   //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
@@ -26,7 +28,7 @@ starpu_codelet tensor_add_cl = {
 template <typename DataType>
 starpu_codelet tensor_fill_cl = {
   //.cpu_funcs = { tensor_fill_cpu_func<DataType> },
-#ifdef STARPU_USE_CUDA
+#ifdef USE_CUDA
   .cuda_funcs = { tensor_fill_cuda_func<DataType> },
   //.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
@@ -35,129 +37,79 @@ starpu_codelet tensor_fill_cl = {
 };
 
 template <typename DataType>
-starpu_codelet tensor_print_cl = {
-  //.cpu_funcs = { tensor_print_cpu_func<DataType> },
-#ifdef STARPU_USE_CUDA
-  .cuda_funcs = { tensor_print_cuda_func<DataType> },
-  //.cuda_flags = { STARPU_CUDA_ASYNC },
-#endif
-  .nbuffers = 1,
-  .modes = { STARPU_R },
+struct TensorData {
+  std::vector<u32> dim_blocks;
+  std::vector<starpu_data_handle_t> data_handle;
+
+  TensorData(std::vector<u32>& dims, u32 block_size) : dim_blocks(dims) {
+    for(auto& elem : dim_blocks) {
+      elem = ceilDiv(elem, block_size);
+    }
+    // Length of last block in each dimension
+    std::vector<u32> dim_final(dim_blocks.size());
+    for(size_t i = 0; i < dim_blocks.size(); i++) {
+      dim_final[i] = (dims[i] % block_size) ? (dims[i] % block_size) : block_size;
+    }
+    // Create data handles for each block in the tensor
+    data_handle = std::vector<starpu_data_handle_t>(std::accumulate(dim_blocks.begin(), dim_blocks.end(), 1, std::multiplies<u32>()));
+    std::vector<u32> idx(dims.size(), 0);
+    for(size_t i = 0; i < data_handle.size(); i++) {
+      auto& handle = get(idx);
+      std::vector<u32> ld(dims.size(), 1);
+      std::vector<u32> dim_size(dims.size());
+      for(size_t d = 0; d < dims.size(); d++) {
+        dim_size[d] = (idx[d] == dim_blocks[d]-1) ? dim_final[d] : block_size;
+      }
+      for(size_t d = 1; d < dims.size(); d++) {
+        ld[d] = dim_size[d-1] * ld[d-1];
+      }
+      std::cout << "Creating tensor block of dim_size=(
+      starpu_ndim_data_register(&handle, -1, 0, &ld[0], &dim_size[0], dims.size(), sizeof(DataType));
+      for(size_t d = 0; d < dims.size(); d++) {
+        idx[d] = (idx[d] >= dim_blocks[d]-1) ? 0 : (idx[d]++);
+        if(idx[d]) { break; }
+      }
+    }
+  }
+
+	~TensorData() {
+		for (auto& handle : data_handle) {
+			starpu_data_unregister(handle);
+		}
+	}
+
+  starpu_data_handle_t& get(std::vector<u32>& idx) {
+    int ld = 1;
+    int lin_idx = 0;
+    for(size_t i = 0; i < dim_blocks.size(); i++) {
+      lin_idx += idx[i] * ld;
+      ld *= dim_blocks[i];
+    }
+    return data_handle[lin_idx];
+  }
 };
 
 template <typename DataType>
 struct Tensor {
   size_t ndim;
-  std::vector<unsigned int> dim_size;
-  std::vector<unsigned int> ld;
-  std::vector<unsigned int> blocks;
-  starpu_data_handle_t data_handle;
-  DataType * data;
+  u32 block_size;
+  std::vector<u32> dim_size;
+  TensorData<DataType> data_handle;
 
-  Tensor(size_t ndim_, std::vector<unsigned int>& dim_size_) : ndim(ndim_), dim_size(dim_size_), ld(ndim, 1), blocks(ndim_, 1) {
-    for(int i = 1; i < ndim; i++) { ld[i] = ld[i-1] * dim_size[i-1]; }
-    //starpu_ndim_data_register(&data_handle, -1, 0, &ld[0], &dim_size[0], ndim, sizeof(DataType));
-    starpu_malloc((void**)&data, (ld[ndim-1]*dim_size[ndim-1])*sizeof(DataType));
-    for(int i = 0; i < ld[ndim-1]*dim_size[ndim-1]; i++) { data[i] = -1; }
-    starpu_ndim_data_register(&data_handle, STARPU_MAIN_RAM, (uintptr_t)data, &ld[0], &dim_size[0], ndim, sizeof(DataType));
-    std::cout << "Created Tensor " << this << " (data_handle=" << data_handle << ")" << std::endl;
-  }
-
-  Tensor(size_t ndim_, std::vector<unsigned int>& dim_size_, std::vector<unsigned int>& tile_size) : Tensor(ndim_, dim_size_) {
-    partition(tile_size);
-  }
-
-  ~Tensor() {
-    std::cout << "Destroying Tensor " << this << " (data_handle=" << data_handle << ")" << std::endl;
-    if(isPartitioned()) { unpartition(); }
-    starpu_data_unregister(data_handle);
-    DataType ref_value = data[0];
-    std::cout << ref_value << std::endl;
-    bool cond = false;
-    for(int i = 0; i < ld[ndim-1]*dim_size[ndim-1]; i++) {
-      int * truc = (int*)&data[i];
-      if((cond && data[i] != ref_value) || (!cond && data[i] == ref_value)) { std::cout << data[i] << " " << i << " " << ld[ndim-1]*dim_size[ndim-1] << std::endl; cond = !cond; }
-    }
-    std::cout << "Destroyed Tensor" << std::endl;
-  }
-
-  void partition(std::vector<unsigned int>& tile_size) {
-    if(isPartitioned()) { unpartition(); }
-    for(int i = 0; i < ndim; i++) {
-      blocks[i] = (dim_size[i] + tile_size[i] - 1)/tile_size[i];
-    }
-    partitionBlocks();
-  }
-
-  void partitionBlocks() {
-    std::vector<starpu_data_filter> filters(ndim);
-    std::vector<starpu_data_filter *> filters_p(ndim);
-    /*
-    for(unsigned int i = 0; i < ndim; i++) {
-      filters[i] = {
-        .filter_func = starpu_ndim_filter_block,
-        .nchildren = blocks[i],
-        .filter_arg = i
-      };
-      filters_p[i] = &filters[i];
-    }
-    */
-    //fstarpu_data_map_filters(data_handle, ndim, &filters_p[0]);
-  }
-
-  void unpartition() {
-    starpu_data_unpartition(data_handle, STARPU_MAIN_RAM);
-    blocks = std::vector<unsigned int>(blocks.size(), 1);
-  }
-
-  bool isPartitioned() {
-    std::vector<unsigned int> no_blocks(blocks.size(), 1);
-    return blocks != no_blocks;
-  }
+  Tensor(std::vector<u32>& dims, u32 bs) : ndim(dims.size()), block_size(bs), dim_size(dims), data_handle(dim_size, block_size) { }
 
   void fill(DataType e) {
-    unsigned int nb_blocks = 1;
-    for(int i = 0; i < ndim; i++) { nb_blocks *= blocks[i]; }
-    {
-      std::vector<int> curr_block(ndim, 0);
-      for(int i = 0; i < nb_blocks; i++) {
-        // Create task for current block
-        starpu_data_handle_t block_handle;// = fstarpu_data_get_sub_data(data_handle, ndim, &curr_block[0]);
-        int err = starpu_task_insert(&tensor_fill_cl<DataType>,
-                                     STARPU_VALUE, &e, sizeof(e),
-                                     STARPU_W, block_handle,
-                                     0);
-        if(err) { throw std::exception(); }
-        // Move to next block
-        for(int dim = 0; dim < ndim; dim++) {
-          curr_block[dim] = (curr_block[dim] < blocks[dim]-1) ? curr_block[dim]+1 : 0;
-          if(curr_block[dim]) { break; }
-        }
-      }
+    for(auto& block_handle : data_handle.data_handle) {
+      std::cout << "Fill" << std::endl;
+      int err = starpu_task_insert(&tensor_fill_cl<DataType>,
+                                   STARPU_VALUE, &e, sizeof(e),
+                                   STARPU_W, block_handle,
+                                   0);
+      if(err) { throw std::exception(); }
+      starpu_task_wait_for_all();
     }
-    starpu_task_wait_for_all();
-    /*
-    {
-      std::vector<int> curr_block(ndim, 0);
-      for(int i = 0; i < nb_blocks; i++) {
-        int block_idx = curr_block[2] * 128 + curr_block[3] * 256 + curr_block[4] * 512;
-        // Create task for current block
-        starpu_data_handle_t block_handle = fstarpu_data_get_sub_data(data_handle, ndim, &curr_block[0]);
-        int err = starpu_task_insert(&tensor_print_cl<DataType>,
-                                     STARPU_VALUE, &block_idx, sizeof(block_idx),
-                                     STARPU_R, block_handle,
-                                     0);
-        if(err) { throw std::exception(); }
-        // Move to next block
-        for(int dim = 0; dim < ndim; dim++) {
-          curr_block[dim] = (curr_block[dim] < blocks[dim]-1) ? curr_block[dim]+1 : 0;
-          if(curr_block[dim]) { break; }
-        }
-      }
-    }
-    */
   }
-
+  /*
   Tensor<DataType> operator+(Tensor<DataType>& other) {
     Tensor<DataType> result(ndim, dim_size);
     result.blocks = blocks;
@@ -168,7 +120,7 @@ struct Tensor {
 
   /**
    * Do operation C = A + B with tasks
-   **/
+   **
   void add(Tensor<DataType>& A, Tensor<DataType>& B, Tensor<DataType>& C) {
     assert(A.ndim == B.ndim && B.ndim == C.ndim);
     assert(A.dim_size == B.dim_size && B.dim_size == C.dim_size);
@@ -197,6 +149,7 @@ struct Tensor {
       }
     }
   }
+  */
 };
 
 #endif

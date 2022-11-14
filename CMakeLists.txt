@@ -153,6 +153,9 @@ set( gemmlib_srcs
   src/matrix/print_func.cpp
   src/matrix/cublas_perf.cpp
   src/matrix/asserteq_func.cpp
+  src/tensor/algorithm.cpp
+  src/tensor/tensor_add_func.cpp
+  src/tensor/tensor_fill_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )

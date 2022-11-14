@@ -165,8 +165,8 @@ struct MatrixData {
 		starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
 		starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
 
-		auto row_final = (rows % block_size) ? rows % block_size : block_size;
-		auto col_final = (cols % block_size) ? cols % block_size : block_size;
+		auto row_final = (rows % block_size) ? (rows % block_size) : block_size;
+    auto col_final = (cols % block_size) ? (cols % block_size) : block_size;
 
 		for (u32 i = 0; i < row_blocks; i++) {
 			for (u32 j = 0; j < col_blocks; j++) {

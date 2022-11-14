@@ -12,10 +12,9 @@
 #include "tensor/tensor.hpp"
 
 void test_tensor() {
-  constexpr size_t ndim = 4;
   std::vector<unsigned int> dim_size = {20, 20, 20, 20};
-  std::vector<unsigned int> tile_size = {10, 2, 2, 2};
-  Tensor<double> A(ndim, dim_size, tile_size);
+  unsigned int block_size = 10;
+  Tensor<double> A(dim_size, block_size);
   //Tensor<double> B(ndim, dim_size, tile_size);
   A.fill(8);
   //B.fill(1);
