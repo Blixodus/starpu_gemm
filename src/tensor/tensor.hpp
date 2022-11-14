@@ -100,7 +100,7 @@ struct Tensor {
       };
       filters_p[i] = &filters[i];
     }
-    fstarpu_data_map_filters(data_handle, ndim, &filters_p[0]);
+    //fstarpu_data_map_filters(data_handle, ndim, &filters_p[0]);
   }
 
   void unpartition() {
@@ -179,9 +179,9 @@ struct Tensor {
     std::vector<int> curr_block(ndim, 0);
     for(int i = 0; i < nb_blocks; i++) {
       // Create task for current block
-      starpu_data_handle_t block_handle_A = fstarpu_data_get_sub_data(A.data_handle, ndim, &curr_block[0]);
-      starpu_data_handle_t block_handle_B = fstarpu_data_get_sub_data(B.data_handle, ndim, &curr_block[0]);
-      starpu_data_handle_t block_handle_C = fstarpu_data_get_sub_data(C.data_handle, ndim, &curr_block[0]);
+      //starpu_data_handle_t block_handle_A = fstarpu_data_get_sub_data(A.data_handle, ndim, &curr_block[0]);
+      //starpu_data_handle_t block_handle_B = fstarpu_data_get_sub_data(B.data_handle, ndim, &curr_block[0]);
+      //starpu_data_handle_t block_handle_C = fstarpu_data_get_sub_data(C.data_handle, ndim, &curr_block[0]);
       int err = starpu_task_insert(&tensor_add_cl<DataType>,
                                    STARPU_R, block_handle_A,
                                    STARPU_R, block_handle_B,
