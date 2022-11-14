@@ -3,8 +3,8 @@
 #include <cuda.h>
 #endif
 #include <cstdio>
-#include "helper.hpp"
 #include "print_func.hpp"
+#include "../util/helper.hpp"
 
 
 template <typename DataType>

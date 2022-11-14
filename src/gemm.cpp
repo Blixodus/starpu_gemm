@@ -17,14 +17,14 @@
 #define ENABLE_REDUX 0
 #endif
 
-#include "accumulate_func.hpp"
-#include "asserteq_func.hpp"
-#include "bzero_func.hpp"
-#include "cublas_perf.hpp"
-#include "fill_func.hpp"
-#include "gemm_func.hpp"
-#include "matrix.hpp"
-#include "print_func.hpp"
+#include "fns/accumulate_func.hpp"
+#include "fns/asserteq_func.hpp"
+#include "fns/bzero_func.hpp"
+#include "fns/cublas_perf.hpp"
+#include "fns/fill_func.hpp"
+#include "fns/gemm_func.hpp"
+#include "fns/print_func.hpp"
+#include "util/matrix.hpp"
 
 void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu

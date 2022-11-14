@@ -5,12 +5,12 @@
 
 #include "helper.hpp"
 
-#include "print_func.hpp"
-#include "gemm_func.hpp"
-#include "bzero_func.hpp"
-#include "accumulate_func.hpp"
-#include "fill_func.hpp"
-#include "asserteq_func.hpp"
+#include "../fns/print_func.hpp"
+#include "../fns/gemm_func.hpp"
+#include "../fns/bzero_func.hpp"
+#include "../fns/accumulate_func.hpp"
+#include "../fns/fill_func.hpp"
+#include "../fns/asserteq_func.hpp"
 
 static constexpr int enable_cpu = 1;
 static constexpr int enable_gpu = 1;

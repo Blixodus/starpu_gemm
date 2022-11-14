@@ -7,7 +7,7 @@
 
 #include "blas.hpp"
 #include "bzero_func.hpp"
-#include "helper.hpp"
+#include "../util/helper.hpp"
 
 template <typename DataType>
 void bzero_matrix_cpu(void* buffers[], void* cl_args) {

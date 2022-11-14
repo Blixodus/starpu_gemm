@@ -9,7 +9,7 @@
 
 #include "blas.hpp"
 #include "gemm_func.hpp"
-#include "helper.hpp"
+#include "../util/helper.hpp"
 
 template <typename DataType>
 void gemm_cpu_func(void* buffers[], void* cl_args) {

@@ -145,14 +145,14 @@ find_package(LAPACKE REQUIRED)
 # -------------
 
 set( gemmlib_srcs
-  src/blas.cpp
-  src/gemm_func.cpp
-  src/bzero_func.cpp
-  src/accumulate_func.cpp
-  src/fill_func.cpp
-  src/print_func.cpp
-  src/cublas_perf.cpp
-  src/asserteq_func.cpp
+  src/fns/blas.cpp
+  src/fns/gemm_func.cpp
+  src/fns/bzero_func.cpp
+  src/fns/accumulate_func.cpp
+  src/fns/fill_func.cpp
+  src/fns/print_func.cpp
+  src/fns/cublas_perf.cpp
+  src/fns/asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )

@@ -7,7 +7,7 @@
 
 #include "accumulate_func.hpp"
 #include "blas.hpp"
-#include "helper.hpp"
+#include "../util/helper.hpp"
 
 template <typename DataType>
 void accumulate_matrix_cpu(void* buffers[], void* cl_args) {

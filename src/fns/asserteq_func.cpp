@@ -4,7 +4,8 @@
 #endif
 #include <iostream>
 #include "asserteq_func.hpp"
-#include "helper.hpp"
+#include "../util/helper.hpp"
+
 
 template <typename DataType>
 void asserteq_cpu_func(void* buffers[], void* cl_args) {

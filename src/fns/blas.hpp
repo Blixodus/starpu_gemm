@@ -1,6 +1,6 @@
 #pragma once
 
-#include "helper.hpp"
+#include "../util/helper.hpp"
 
 template <typename DataType>
 struct blas {
