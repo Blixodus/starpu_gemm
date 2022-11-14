@@ -7,9 +7,9 @@
 #include <chrono>
 #include <fstream>
 
-#include "tensor_fill_func.hpp"
-#include "tensor_add_func.hpp"
-#include "tensor.hpp"
+#include "tensor/tensor_fill_func.hpp"
+#include "tensor/tensor_add_func.hpp"
+#include "tensor/tensor.hpp"
 
 void test_tensor() {
   constexpr size_t ndim = 4;
