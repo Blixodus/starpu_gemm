@@ -17,9 +17,8 @@ void tensor_fill_cpu_func(void *buffers[], void *cl_args) {
 
 	//printf("FILL CPU %p\n", T.ptr);
 
-	u32 cont_len;
 	std::vector<std::vector<u32>> lin_idx_vec(1);
-	compute_contiguous(1, T.ndim, T.nn, &T.ldn, cont_len, lin_idx_vec);
+	u32 cont_len = compute_contiguous(1, T.ndim, T.nn, &T.ldn, lin_idx_vec);
 
 	// Update each contiguous part separately
 	for(auto& lin_idx : lin_idx_vec[0]) {
@@ -51,9 +50,8 @@ void tensor_fill_cuda_func(void *buffers[], void *cl_args) {
 		//printf("LD / DIM %d %d\n", T.ldn[i], T.nn[i]);
 	}
 	
-	u32 cont_len;
 	std::vector<std::vector<u32>> lin_idx_vec(1);
-	compute_contiguous(1, T.ndim, T.nn, &T.ldn, cont_len, lin_idx_vec);
+	u32 cont_len = compute_contiguous(1, T.ndim, T.nn, &T.ldn, lin_idx_vec);
 
 	// Update each contiguous part separately
 	for(auto& lin_idx : lin_idx_vec[0]) {

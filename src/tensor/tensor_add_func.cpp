@@ -13,12 +13,10 @@ void tensor_add_cpu_func(void *buffers[], void *cl_args) {
 	auto B = as_tensor<DataType>(buffers[1]);
 	auto C = as_tensor<DataType>(buffers[2]);
 
-	u32 cont_len = 1;
-
 	std::vector<u32*> ld = { A.ldn, B.ldn, C.ldn };
 	std::vector<std::vector<u32>> lin_idx(3);
 
-	compute_contiguous(3, A.ndim, A.nn, &ld[0], cont_len, lin_idx);
+	u32 cont_len = compute_contiguous(3, A.ndim, A.nn, &ld[0], lin_idx);
 	
 	// Update each common contiguous part separately
 	for(u32 e = 0; e < lin_idx[0].size(); e++) {

@@ -2,6 +2,10 @@
 
 #include "../util/helper.hpp"
 
+#include "tensor_add_func.hpp"
+#include "tensor_fill_func.hpp"
+#include "tensor_print_func.hpp"
+
 #include <array>
 
 
@@ -50,9 +54,27 @@ template <typename DataType>
 static auto tensor_fill_cl = make_tensor_fill_cl<DataType>();
 
 template <typename DataType>
+starpu_codelet make_tensor_print_cl() {
+	static struct starpu_perfmodel model = {
+		.type = STARPU_REGRESSION_BASED,
+		.symbol = __PRETTY_FUNCTION__
+	};
+
+	return {
+		.cpu_funcs = { tensor_print_cpu_func<DataType> },
+		.nbuffers = 1,
+		.modes = { STARPU_R },
+		.model = &model,
+	};
+}
+
+template <typename DataType>
+static auto tensor_print_cl = make_tensor_print_cl<DataType>();
+
+template <typename DataType>
 struct TensorData {
 	std::vector<u32> dim_blocks;
-	std::vector<starpu_data_handle_t> data_handle;
+	std::vector<starpu_data_handle_t> data_handles;
 
 	TensorData(std::vector<u32> dims, u32 block_size) : dim_blocks(dims) {
 		for(auto& elem : dim_blocks) {
@@ -67,15 +89,15 @@ struct TensorData {
 		}
 
 		// Create data handles for each block in the tensor
-		data_handle = std::vector<starpu_data_handle_t>(
-			unchecked_cast<typename decltype(data_handle)::size_type>(
+		data_handles = std::vector<starpu_data_handle_t>(
+			unchecked_cast<typename decltype(data_handles)::size_type>(
 				std::accumulate(dim_blocks.begin(), dim_blocks.end(), 1, std::multiplies<u32>())
 			)
 		);
 		
 		std::vector<u32> idx(dims.size(), 0);
 
-		for(size_t i = 0; i < data_handle.size(); i++) {
+		for(size_t i = 0; i < data_handles.size(); i++) {
 			auto& handle = get(idx);
 
 			std::cout << "Creating handle " << handle << " with dims: " << VecPrinter(idx) << std::endl;
@@ -101,11 +123,10 @@ struct TensorData {
 				}
 			}
 		}
-    std::cout << VecPrinter(data_handle) << std::endl;
 	}
 
 	~TensorData() {
-		for (auto& handle : data_handle) {
+		for (auto& handle : data_handles) {
 			starpu_data_unregister(handle);
 		}
 	}
@@ -119,7 +140,7 @@ struct TensorData {
 			ld *= dim_blocks[i];
 		}
 
-		return data_handle[lin_idx];
+		return data_handles[lin_idx];
 	}
 };
 
@@ -132,10 +153,8 @@ struct Tensor {
 	Tensor(std::vector<u32> dims, u32 bs) : block_size(bs), dim_size(dims), data_handle(dim_size, block_size) { }
 
 	void fill(DataType e) {
-		// std::cout << "Fill on handles: " << VecPrinter(data_handle.data_handle) << std::endl;
-
-		for(auto& block_handle : data_handle.data_handle) {
-      std::cout << "Task inserted (fill) : " << block_handle << std::endl;
+		for(auto& block_handle : data_handle.data_handles) {
+      		std::cout << "Task inserted (fill) : " << block_handle << std::endl;
 
 			int err = starpu_task_insert(&tensor_fill_cl<DataType>,
 											STARPU_VALUE, &e, sizeof(e),
@@ -144,8 +163,19 @@ struct Tensor {
 			if(err) {
 				throw std::exception();
 			}
+		}
+	}
 
-			starpu_task_wait_for_all();
+	void print(char tag) {
+		for (auto& block_handle: data_handle.data_handles) {
+			int err = starpu_task_insert(&tensor_print_cl<DataType>,
+											STARPU_VALUE, &tag, sizeof(tag),
+											STARPU_R, block_handle,
+											NULL);
+
+			if(err) {
+				throw std::exception();
+			}
 		}
 	}
 	
@@ -169,19 +199,24 @@ struct Tensor {
 		for(int i = 0; i < nb_blocks; i++) {
 			// Create task for current block
 			auto block_handle_A = A.data_handle.get(curr_block);
-		  auto block_handle_B = B.data_handle.get(curr_block);
-		  auto block_handle_C = C.data_handle.get(curr_block);
-      std::cout << "Task inserted (add) : " << block_handle_A << " " << block_handle_B << " " << block_handle_C << std::endl;
+			auto block_handle_B = B.data_handle.get(curr_block);
+			auto block_handle_C = C.data_handle.get(curr_block);
+			
+			std::cout << "Task inserted (add) : " << block_handle_A << " " << block_handle_B << " " << block_handle_C << std::endl;
 			int err = starpu_task_insert(&tensor_add_cl<DataType>,
 																	 STARPU_R, block_handle_A,
 																	 STARPU_R, block_handle_B,
 																	 STARPU_RW, block_handle_C,
 																	 0);
 			if(err) { throw std::exception(); }
+
 			// Move to next block
-			for(int dim = 0; dim < ndim; dim++) {
-				curr_block[dim] = (curr_block[dim] < blocks[dim]-1) ? curr_block[dim]+1 : 0;
-				if(curr_block[dim]) { break; }
+			for(size_t dim = 0; dim < ndim; dim++) {
+				curr_block[dim] = (curr_block[dim] < blocks[dim] - 1) ? curr_block[dim] + 1 : 0;
+
+				if(curr_block[dim]) {
+					break;
+				}
 			}
 		}
     

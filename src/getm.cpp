@@ -20,9 +20,8 @@ void test_tensor() {
 	Tensor<double> C({4, 4, 4, 4}, 2);
 	A.fill(8);
 	B.fill(1);
-  C.fill(0);
-  Tensor<double>::add(A, B, C);
-	//auto C = A + B;
+	C.fill(0);
+	Tensor<double>::add(A, B, C);
 }
 
 int main(int argc, char ** argv) {
