@@ -1,8 +1,12 @@
 #pragma once
 
 #include <string>
+#include <array>
 #include <type_traits>
+#include <iostream>
 #include "starpu.h"
+
+#include "make_array.hpp"
 
 // newtypes
 
@@ -42,7 +46,32 @@ template <typename T>
 constexpr MatrixInfo<T> as_matrix(void* ptr) {
 	auto iface = reinterpret_cast<starpu_matrix_interface*>(ptr);
 
-	return {.ld = iface->ld, .rows = iface->nx, .cols = iface->ny, .ptr = reinterpret_cast<T*>(iface->ptr)};
+	return {
+		.ld = iface->ld,
+		.rows = iface->nx,
+		.cols = iface->ny,
+		.ptr = reinterpret_cast<T*>(iface->ptr)
+	};
+}
+
+template <typename T>
+struct TensorInfo {
+	T* ptr;
+	u32* nn;
+	u32* ldn;
+	size_t ndim;
+};
+
+template <typename T>
+constexpr TensorInfo<T> as_tensor(void* ptr) {
+	auto iface = reinterpret_cast<starpu_ndim_interface*>(ptr);
+
+	return {
+		.ptr = reinterpret_cast<T*>(iface->ptr),
+		.nn = iface->nn,
+		.ldn = iface->ldn,
+		.ndim = iface->ndim
+	};
 }
 
 template <typename T>
@@ -51,10 +80,48 @@ inline constexpr T ceilDiv(T a, T b) noexcept {
 }
 
 template <typename Res, typename Base>
-inline constexpr Res safe_cast(Base val) {
+inline constexpr Res checked_cast(Base val) {
+	return static_cast<Res>(val);
+}
+
+/**
+ * Cast which is not runtime-checked by default
+*/
+template <typename Res, typename Base>
+inline constexpr Res unchecked_cast(Base val) {
 	return static_cast<Res>(val);
 }
 
 inline u32 stoui(const char* str) {
-	return safe_cast<u32>(std::stoul(str));
+	return checked_cast<u32>(std::stoul(str));
 }
+
+template <typename V, typename... T>
+inline constexpr std::array<V, sizeof...(T)> array(T&&... t) {
+	return {{ std::forward<V>(t)... }};
+}
+
+template <typename P>
+class VecPrinter {
+	public:
+		VecPrinter(const std::vector<P>& vec): vec(vec) {}
+
+		friend std::ostream& operator << (std::ostream& os, const VecPrinter& vp) {
+			os << "[";
+
+			if (vp.vec.size() > 0) {
+				os << vp.vec[0];
+
+				for (size_t i = 1; i < vp.vec.size(); i++) {
+					os << ", ";
+					os << vp.vec[i];
+				}
+			}
+
+			os << "]";
+			return os;
+		}
+
+	private:
+		const std::vector<P>& vec;
+};
