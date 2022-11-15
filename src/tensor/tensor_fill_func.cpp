@@ -15,7 +15,7 @@ void tensor_fill_cpu_func(void *buffers[], void *cl_args) {
 
 	auto T = as_tensor<DataType>(buffers[0]);
 
-	printf("FILL CPU %p\n", T.ptr);
+	//printf("FILL CPU %p\n", T.ptr);
 
 	u32 cont_len;
 	std::vector<std::vector<u32>> lin_idx_vec(1);
@@ -45,10 +45,10 @@ void tensor_fill_cuda_func(void *buffers[], void *cl_args) {
 
 	auto T = as_tensor<DataType>(buffers[0]);
 
-	printf("FILL CUDA %p\n", T.ptr);
+	//printf("FILL CUDA %p\n", T.ptr);
 
 	for(size_t i = 0; i < T.ndim; i++) {
-		printf("LD / DIM %d %d\n", T.ldn[i], T.nn[i]);
+		//printf("LD / DIM %d %d\n", T.ldn[i], T.nn[i]);
 	}
 	
 	u32 cont_len;
@@ -62,7 +62,7 @@ void tensor_fill_cuda_func(void *buffers[], void *cl_args) {
 
 		tensor_fill_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(&T.ptr[lin_idx], cont_len, e);
 
-		printf("lin_idx = %d, threads=%d, blocks=%d\n", lin_idx, threadsPerBlock.x, numBlocks.x);
+		//printf("lin_idx = %d, threads=%d, blocks=%d\n", lin_idx, threadsPerBlock.x, numBlocks.x);
 		cudaError_t status = cudaGetLastError();
 
 		if (status != cudaSuccess) {

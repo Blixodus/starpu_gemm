@@ -23,7 +23,7 @@ void compute_contiguous(size_t ntensor, size_t ndim, u32 *dim_size, u32 **ld, u3
 		cont_len *= dim_size[cont_dim];
 	}
 
-	printf("cont_len=%d\n", cont_len);
+	//printf("cont_len=%d\n", cont_len);
 
 	u32 noncont_elems = 1;
 

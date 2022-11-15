@@ -78,7 +78,7 @@ struct TensorData {
 		for(size_t i = 0; i < data_handle.size(); i++) {
 			auto& handle = get(idx);
 
-			// std::cout << "Creating handle " << i << " with dims: " << VecPrinter(idx) << std::endl;
+			std::cout << "Creating handle " << handle << " with dims: " << VecPrinter(idx) << std::endl;
 
 			std::vector<u32> ld(dims.size(), 1);
 			std::vector<u32> dim_size(dims.size());
@@ -101,6 +101,7 @@ struct TensorData {
 				}
 			}
 		}
+    std::cout << VecPrinter(data_handle) << std::endl;
 	}
 
 	~TensorData() {
@@ -134,7 +135,7 @@ struct Tensor {
 		// std::cout << "Fill on handles: " << VecPrinter(data_handle.data_handle) << std::endl;
 
 		for(auto& block_handle : data_handle.data_handle) {
-			// printf("Fill task inserted: %p\n", block_handle);
+      std::cout << "Task inserted (fill) : " << block_handle << std::endl;
 
 			int err = starpu_task_insert(&tensor_fill_cl<DataType>,
 											STARPU_VALUE, &e, sizeof(e),
@@ -147,33 +148,30 @@ struct Tensor {
 			starpu_task_wait_for_all();
 		}
 	}
-	/*
+	
 	Tensor<DataType> operator+(Tensor<DataType>& other) {
-		Tensor<DataType> result(ndim, dim_size);
-		result.blocks = blocks;
-		result.partitionBlocks();
+		Tensor<DataType> result(dim_size, block_size);
 		add(*this, other, result);
 		return result;
 	}
 
 	/**
 	 * Do operation C = A + B with tasks
-	 **
-	void add(Tensor<DataType>& A, Tensor<DataType>& B, Tensor<DataType>& C) {
-		assert(A.ndim == B.ndim && B.ndim == C.ndim);
+	 **/
+	static void add(Tensor<DataType>& A, Tensor<DataType>& B, Tensor<DataType>& C) {
 		assert(A.dim_size == B.dim_size && B.dim_size == C.dim_size);
-		assert(A.blocks == B.blocks && B.blocks == C.blocks);
-		auto & ndim = A.ndim;
-		auto & blocks = A.blocks;
-		unsigned int nb_blocks = 1;
-		for(int i = 0; i < ndim; i++) { nb_blocks *= blocks[i]; }
+		assert(A.block_size == B.block_size && B.block_size == C.block_size);
+		const auto &ndim = A.dim_size.size();
+		const auto &blocks = A.data_handle.dim_blocks;
+		const auto nb_blocks = std::accumulate(blocks.begin(), blocks.end(), 1, std::multiplies<u32>());
 		
-		std::vector<int> curr_block(ndim, 0);
+		std::vector<u32> curr_block(ndim, 0);
 		for(int i = 0; i < nb_blocks; i++) {
 			// Create task for current block
-			starpu_data_handle_t block_handle_A;// = fstarpu_data_get_sub_data(A.data_handle, ndim, &curr_block[0]);
-			starpu_data_handle_t block_handle_B;// = fstarpu_data_get_sub_data(B.data_handle, ndim, &curr_block[0]);
-			starpu_data_handle_t block_handle_C;// = fstarpu_data_get_sub_data(C.data_handle, ndim, &curr_block[0]);
+			auto block_handle_A = A.data_handle.get(curr_block);
+		  auto block_handle_B = B.data_handle.get(curr_block);
+		  auto block_handle_C = C.data_handle.get(curr_block);
+      std::cout << "Task inserted (add) : " << block_handle_A << " " << block_handle_B << " " << block_handle_C << std::endl;
 			int err = starpu_task_insert(&tensor_add_cl<DataType>,
 																	 STARPU_R, block_handle_A,
 																	 STARPU_R, block_handle_B,
@@ -186,6 +184,7 @@ struct Tensor {
 				if(curr_block[dim]) { break; }
 			}
 		}
+    
+    starpu_task_wait_for_all();
 	}
-	*/
 };

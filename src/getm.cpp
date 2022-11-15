@@ -16,9 +16,12 @@
 
 void test_tensor() {
 	Tensor<double> A({4, 4, 4, 4}, 2);
-	//Tensor<double> B(ndim, dim_size, tile_size);
+	Tensor<double> B({4, 4, 4, 4}, 2);
+	Tensor<double> C({4, 4, 4, 4}, 2);
 	A.fill(8);
-	//B.fill(1);
+	B.fill(1);
+  C.fill(0);
+  Tensor<double>::add(A, B, C);
 	//auto C = A + B;
 }
 
