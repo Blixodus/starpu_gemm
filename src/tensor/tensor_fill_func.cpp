@@ -28,6 +28,10 @@ void tensor_fill_cpu_func(void *buffers[], void *cl_args) {
 	}
 }
 
+template void tensor_fill_cpu_func<float>(void *buffers[], void *cl_args);
+template void tensor_fill_cpu_func<double>(void *buffers[], void *cl_args);
+
+#ifdef USE_CUDA
 template <typename DataType>
 __global__ void tensor_fill_kernel(DataType *start_idx, u32 len, DataType val) {
 	auto i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -69,7 +73,6 @@ void tensor_fill_cuda_func(void *buffers[], void *cl_args) {
 	}
 }
 
-template void tensor_fill_cpu_func<float>(void *buffers[], void *cl_args);
-template void tensor_fill_cpu_func<double>(void *buffers[], void *cl_args);
 template void tensor_fill_cuda_func<float>(void *buffers[], void *cl_args);
 template void tensor_fill_cuda_func<double>(void *buffers[], void *cl_args);
+#endif

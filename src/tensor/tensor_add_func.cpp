@@ -26,12 +26,15 @@ void tensor_add_cpu_func(void *buffers[], void *cl_args) {
 	}
 }
 
+template void tensor_add_cpu_func<float>(void *buffers[], void *cl_args);
+template void tensor_add_cpu_func<double>(void *buffers[], void *cl_args);
+
+#ifdef USE_CUDA
 template <typename DataType>
 void tensor_add_cuda_func(void *buffers[], void *cl_args) {
 
 }
 
-template void tensor_add_cpu_func<float>(void *buffers[], void *cl_args);
-template void tensor_add_cpu_func<double>(void *buffers[], void *cl_args);
 template void tensor_add_cuda_func<float>(void *buffers[], void *cl_args);
 template void tensor_add_cuda_func<double>(void *buffers[], void *cl_args);
+#endif

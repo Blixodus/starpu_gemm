@@ -20,8 +20,8 @@ starpu_codelet make_tensor_add_cl() {
 	return {
 		.cpu_funcs = { tensor_add_cpu_func<DataType> },
 	#ifdef USE_CUDA
-		.cuda_funcs = { tensor_add_cuda_func<DataType> },
-		.cuda_flags = { STARPU_CUDA_ASYNC },
+		//.cuda_funcs = { tensor_add_cuda_func<DataType> },
+		//.cuda_flags = { STARPU_CUDA_ASYNC },
 	#endif
 		.nbuffers = 3,
 		.modes = { STARPU_R, STARPU_R, STARPU_RW },
@@ -76,7 +76,9 @@ template <typename DataType>
 starpu_codelet make_tensor_asserteq_cl() {
   return {
 		.cpu_funcs = { tensor_asserteq_cpu_func<DataType> },
+    #ifdef USE_CUDA
 		.cuda_funcs = { tensor_asserteq_cuda_func<DataType> },
+    #endif
 		.nbuffers = 1,
 		.modes = { STARPU_R },
 	};
