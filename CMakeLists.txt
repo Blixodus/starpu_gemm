@@ -158,6 +158,7 @@ set( gemmlib_srcs
   src/tensor/tensor_add_func.cpp
   src/tensor/tensor_fill_func.cpp
   src/tensor/tensor_print_func.cpp
+  src/tensor/tensor_asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )

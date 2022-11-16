@@ -149,8 +149,7 @@ starpu_codelet make_asserteq_cl() {
 template <typename DataType>
 static auto asserteq_cl = make_asserteq_cl<DataType>();
 
-static int mpi_tag = 0;
-
+static int matrix_mpi_tag = 0;
 template <typename DataType>
 struct MatrixData {
 	u32 row_blocks, col_blocks;
@@ -175,13 +174,8 @@ struct MatrixData {
 				auto rows_block = (i == row_blocks - 1) ? row_final : block_size;
 				auto cols_block = (j == col_blocks - 1) ? col_final : block_size;
 
-				starpu_matrix_data_register(
-					&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType)
-				);
-
-				starpu_mpi_data_register(handle, mpi_tag++, static_cast<int>(i + j) % size);
-				// std::cout << rank << " " << (i+j)%size << " " << handle << " " << i << " " << j
-				// << " " << rows_block << " " << cols_block << std::endl;
+				starpu_matrix_data_register(&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType));
+				starpu_mpi_data_register(handle, matrix_mpi_tag++, static_cast<int>(i + j) % size);
 			}
 		}
 	}

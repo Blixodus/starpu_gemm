@@ -1,4 +1,5 @@
 #include <starpu.h>
+#include <starpu_mpi.h>
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -7,10 +8,7 @@
 #include <chrono>
 #include <fstream>
 
-#include "tensor/tensor_fill_func.hpp"
-#include "tensor/tensor_add_func.hpp"
 #include "tensor/tensor.hpp"
-
 #include "util/helper.hpp"
 
 
@@ -22,16 +20,20 @@ void test_tensor() {
 	B.fill(1);
 	C.fill(0);
 	Tensor<double>::add(A, B, C);
+	C.assertEq(9);
 }
 
 int main(int argc, char ** argv) {
 	int err = starpu_init(NULL);
 	if(err) { throw std::exception(); }
+	err = starpu_mpi_init(&argc, &argv, 1);
+	if (err) { throw std::exception(); }
 	starpu_cublas_init();
 
 	test_tensor();
 	
 	starpu_cublas_shutdown();
+	starpu_mpi_shutdown();
 	starpu_shutdown();
 	return 0;
 }

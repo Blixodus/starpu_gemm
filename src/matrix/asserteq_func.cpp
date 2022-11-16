@@ -18,7 +18,7 @@ void asserteq_cpu_func(void* buffers[], void* cl_args) {
 	for (u32 i = 0; i < M.cols; i++) {
 		for (u32 j = 0; j < M.rows; j++) {
 			if (fabs(M.ptr[i * M.ld + j] - val) > 1e-6) {
-				printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, M.ptr[i * M.ld + j], val);
+				printf("Wrong at (%d, %d) found %f expected %f !\n", i, j, M.ptr[i * M.ld + j], val);
 			};
 		}
 	}
@@ -35,7 +35,7 @@ __global__ void asserteq_kernel(DataType* mat, u32 rows, u32 cols, u32 ld, DataT
 
 	if ((i < rows) && (j < cols)) {
 		if (mat[j * ld + i] != val) {
-			printf("Wrong ! at (%d, %d) found %f expected %f\n", i, j, mat[i * ld + j], val);
+			printf("Wrong at (%d, %d) found %f expected %f !\n", i, j, mat[i * ld + j], val);
 		}
 	}
 }

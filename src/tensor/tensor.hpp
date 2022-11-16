@@ -5,6 +5,7 @@
 #include "tensor_add_func.hpp"
 #include "tensor_fill_func.hpp"
 #include "tensor_print_func.hpp"
+#include "tensor_asserteq_func.hpp"
 
 #include <array>
 
@@ -72,14 +73,35 @@ template <typename DataType>
 static auto tensor_print_cl = make_tensor_print_cl<DataType>();
 
 template <typename DataType>
+starpu_codelet make_tensor_asserteq_cl() {
+  return {
+		.cpu_funcs = { tensor_asserteq_cpu_func<DataType> },
+		.cuda_funcs = { tensor_asserteq_cuda_func<DataType> },
+		.nbuffers = 1,
+		.modes = { STARPU_R },
+	};
+}
+
+template <typename DataType>
+static auto tensor_asserteq_cl = make_tensor_asserteq_cl<DataType>();
+
+static int tensor_mpi_tag = 0;
+template <typename DataType>
 struct TensorData {
 	std::vector<u32> dim_blocks;
+	std::vector<u32> ld;
 	std::vector<starpu_data_handle_t> data_handles;
 
-	TensorData(std::vector<u32> dims, u32 block_size) : dim_blocks(dims) {
+	TensorData(std::vector<u32> dims, u32 block_size) : dim_blocks(dims), ld(dims.size(), 1) {
+		int rank, size;
+
+		starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
+		starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
+    
 		for(auto& elem : dim_blocks) {
 			elem = ceilDiv(elem, block_size);
 		}
+    compute_ld();
 
 		// Length of last block in each dimension
 		std::vector<u32> dim_final(dim_blocks.size());
@@ -100,8 +122,6 @@ struct TensorData {
 		for(size_t i = 0; i < data_handles.size(); i++) {
 			auto& handle = get(idx);
 
-			std::cout << "Creating handle " << handle << " with dims: " << VecPrinter(idx) << std::endl;
-
 			std::vector<u32> ld(dims.size(), 1);
 			std::vector<u32> dim_size(dims.size());
 
@@ -114,6 +134,7 @@ struct TensorData {
 			}
 
 			starpu_ndim_data_register(&handle, -1, 0, &ld[0], &dim_size[0], dims.size(), sizeof(DataType));
+      starpu_mpi_data_register(handle, tensor_mpi_tag++, static_cast<int>(linearize_idx(idx)) % size);
 			
 			for(size_t d = 0; d < dims.size(); d++) {
 				idx[d] = (idx[d] >= dim_blocks[d] - 1) ? 0 : (idx[d] + 1);
@@ -132,16 +153,23 @@ struct TensorData {
 	}
 
 	starpu_data_handle_t& get(std::vector<u32>& idx) {
-		u32 ld = 1;
-		u32 lin_idx = 0;
-
-		for(size_t i = 0; i < dim_blocks.size(); i++) {
-			lin_idx += idx[i] * ld;
-			ld *= dim_blocks[i];
-		}
-
-		return data_handles[lin_idx];
+		return data_handles[linearize_idx(idx)];
 	}
+  
+private:
+  void compute_ld() {
+    for(size_t i = 1; i < dim_blocks.size(); i++) {
+      ld[i] = dim_blocks[i-1] * ld[i-1];
+		}
+  }
+
+  u32 linearize_idx(std::vector<u32>& idx) {
+		u32 lin_idx = 0;
+		for(size_t i = 0; i < dim_blocks.size(); i++) {
+			lin_idx += idx[i] * ld[i];
+		}
+    return lin_idx;
+  }
 };
 
 template <typename DataType>
@@ -154,12 +182,26 @@ struct Tensor {
 
 	void fill(DataType e) {
 		for(auto& block_handle : data_handle.data_handles) {
-      		std::cout << "Task inserted (fill) : " << block_handle << std::endl;
+      std::cout << "Task inserted (fill) : " << block_handle << std::endl;
 
-			int err = starpu_task_insert(&tensor_fill_cl<DataType>,
-											STARPU_VALUE, &e, sizeof(e),
-											STARPU_W, block_handle,
-											NULL);
+      int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_fill_cl<DataType>,
+                                       STARPU_VALUE, &e, sizeof(e),
+                                       STARPU_W, block_handle,
+                                       NULL);
+			if(err) {
+				throw std::exception();
+			}
+		}
+	}
+
+	void assertEq(DataType e) {
+		for(auto& block_handle : data_handle.data_handles) {
+      std::cout << "Task inserted (assert equal) : " << block_handle << std::endl;
+
+      int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_asserteq_cl<DataType>,
+                                       STARPU_VALUE, &e, sizeof(e),
+                                       STARPU_R, block_handle,
+                                       NULL);
 			if(err) {
 				throw std::exception();
 			}
@@ -168,10 +210,10 @@ struct Tensor {
 
 	void print(char tag) {
 		for (auto& block_handle: data_handle.data_handles) {
-			int err = starpu_task_insert(&tensor_print_cl<DataType>,
-											STARPU_VALUE, &tag, sizeof(tag),
-											STARPU_R, block_handle,
-											NULL);
+			int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_print_cl<DataType>,
+                                       STARPU_VALUE, &tag, sizeof(tag),
+                                       STARPU_R, block_handle,
+                                       NULL);
 
 			if(err) {
 				throw std::exception();
@@ -203,11 +245,11 @@ struct Tensor {
 			auto block_handle_C = C.data_handle.get(curr_block);
 			
 			std::cout << "Task inserted (add) : " << block_handle_A << " " << block_handle_B << " " << block_handle_C << std::endl;
-			int err = starpu_task_insert(&tensor_add_cl<DataType>,
-																	 STARPU_R, block_handle_A,
-																	 STARPU_R, block_handle_B,
-																	 STARPU_RW, block_handle_C,
-																	 0);
+			int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_add_cl<DataType>,
+                                       STARPU_R, block_handle_A,
+                                       STARPU_R, block_handle_B,
+                                       STARPU_RW, block_handle_C,
+                                       0);
 			if(err) { throw std::exception(); }
 
 			// Move to next block
@@ -219,7 +261,5 @@ struct Tensor {
 				}
 			}
 		}
-    
-    starpu_task_wait_for_all();
 	}
 };
