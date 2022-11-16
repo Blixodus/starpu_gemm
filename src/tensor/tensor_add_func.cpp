@@ -31,8 +31,38 @@ template void tensor_add_cpu_func<double>(void *buffers[], void *cl_args);
 
 #ifdef USE_CUDA
 template <typename DataType>
-void tensor_add_cuda_func(void *buffers[], void *cl_args) {
+__global__ void tensor_add_kernel(DataType *A_ptr, DataType *B_ptr, DataType *C_ptr, u32 len) {
+	auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
+	if(i < len) {
+	  C_ptr[i] = A_ptr[i] + B_ptr[i];
+	}
+}
+
+template <typename DataType>
+void tensor_add_cuda_func(void *buffers[], void *cl_args) {
+	auto A = as_tensor<DataType>(buffers[0]);
+	auto B = as_tensor<DataType>(buffers[1]);
+	auto C = as_tensor<DataType>(buffers[2]);
+
+	std::vector<u32*> ld = { A.ldn, B.ldn, C.ldn };
+	std::vector<std::vector<u32>> lin_idx(3);
+
+	u32 cont_len = compute_contiguous(3, A.ndim, A.nn, &ld[0], lin_idx);
+	
+	// Update each common contiguous part separately
+	for(u32 e = 0; e < lin_idx[0].size(); e++) {
+		dim3 threadsPerBlock(256);
+		dim3 numBlocks(ceilDiv(cont_len, threadsPerBlock.x));
+
+		tensor_add_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(&A.ptr[lin_idx[0][e]], &B.ptr[lin_idx[1][e]], &C.ptr[lin_idx[2][e]], cont_len);
+
+		cudaError_t status = cudaGetLastError();
+
+		if (status != cudaSuccess) {
+			STARPU_CUDA_REPORT_ERROR(status);
+		}
+	}
 }
 
 template void tensor_add_cuda_func<float>(void *buffers[], void *cl_args);

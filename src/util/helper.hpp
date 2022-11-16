@@ -7,6 +7,7 @@
 #include "starpu.h"
 
 #include "make_array.hpp"
+#include "dim_iter.hpp"
 
 // newtypes
 

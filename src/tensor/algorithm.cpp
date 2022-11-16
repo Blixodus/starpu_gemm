@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cstdio>
+#include <numeric>
 
 
 /**
@@ -24,39 +25,25 @@ u32 compute_contiguous(size_t ntensor, size_t ndim, u32 *dim_size, u32 **ld, std
 	}
 
 	// we finished computing the maximum contiguous length
-	cont_len_over:
-
-	// printf("cont_len=%d\n", cont_len);
-
-	u32 noncont_elems = 1;
+ cont_len_over:
 
 	// Compute the number of non-contiguous starting indices
-	for(size_t dim = cont_dim; dim < ndim; ++dim) {
-		noncont_elems *= dim_size[dim];
-	}
+	u32 noncont_elems = std::accumulate(dim_size+cont_dim, dim_size+ndim, 1, std::multiplies<u32>());
 
-	std::vector<u32> elem(ndim, 0);
-
-	for(size_t i = 0; i < ntensor; i++) {
-		lin_idx_vec[i] = std::vector<u32>(noncont_elems, 0);
+	for(auto & lin_idx : lin_idx_vec) {
+		lin_idx = std::vector<u32>(noncont_elems, 0);
 	}
 
 	// Compute non-contiguous starting indices
-	for(u32 e = 0; e < noncont_elems; e++) {
+  size_t e = 0;
+	for(auto & elem : DimIter(dim_size, ndim, cont_dim)) {
 		for(size_t dim = cont_dim; dim < ndim; dim++) {
 			for(size_t i = 0; i < ntensor; i++) {
 				lin_idx_vec[i][e] += elem[dim] * ld[i][dim];
 			}
 		}
-
-		for(size_t dim = cont_dim; dim < ndim; dim++) {
-			elem[dim] = (elem[dim] < dim_size[dim] - 1) ? elem[dim] + 1 : 0;
-
-			if(elem[dim]) {
-				break;
-			}
-		}
+    e++;
 	}
-
+  
 	return cont_len;
 }
