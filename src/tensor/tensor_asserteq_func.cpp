@@ -14,9 +14,7 @@ void tensor_asserteq_cpu_func(void *buffers[], void *cl_args) {
 	starpu_codelet_unpack_args(cl_args, &val);
 
 	auto T = as_tensor<DataType>(buffers[0]);
-
-	std::vector<std::vector<u32>> lin_idx_vec(1);
-	u32 cont_len = compute_contiguous(1, T.ndim, T.nn, &T.ldn, lin_idx_vec);
+	auto [cont_len, lin_idx_vec] = compute_contiguous(1, T.ndim, T.nn, &T.ldn);
 
 	// Check each contiguous part separately
 	for(auto& lin_idx : lin_idx_vec[0]) {
@@ -49,9 +47,7 @@ void tensor_asserteq_cuda_func(void *buffers[], void *cl_args) {
 	starpu_codelet_unpack_args(cl_args, &val);
 
 	auto T = as_tensor<DataType>(buffers[0]);
-	
-	std::vector<std::vector<u32>> lin_idx_vec(1);
-	u32 cont_len = compute_contiguous(1, T.ndim, T.nn, &T.ldn, lin_idx_vec);
+	auto [cont_len, lin_idx_vec] = compute_contiguous(1, T.ndim, T.nn, &T.ldn);
 
 	// Update each contiguous part separately
 	for(auto& lin_idx : lin_idx_vec[0]) {

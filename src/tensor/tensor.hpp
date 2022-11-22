@@ -118,10 +118,8 @@ struct TensorData {
 				std::accumulate(dim_blocks.begin(), dim_blocks.end(), 1, std::multiplies<u32>())
 			)
 		);
-		
-		std::vector<u32> idx(dims.size(), 0);
 
-		for(size_t i = 0; i < data_handles.size(); i++) {
+		for(auto &idx : DimIter(dim_blocks)) {
 			auto& handle = get(idx);
 
 			std::vector<u32> ld(dims.size(), 1);
@@ -137,14 +135,6 @@ struct TensorData {
 
 			starpu_ndim_data_register(&handle, -1, 0, &ld[0], &dim_size[0], dims.size(), sizeof(DataType));
       starpu_mpi_data_register(handle, tensor_mpi_tag++, static_cast<int>(linearize_idx(idx)) % size);
-			
-			for(size_t d = 0; d < dims.size(); d++) {
-				idx[d] = (idx[d] >= dim_blocks[d] - 1) ? 0 : (idx[d] + 1);
-
-				if(idx[d]) {
-					break;
-				}
-			}
 		}
 	}
 
@@ -236,7 +226,7 @@ struct Tensor {
                                        STARPU_R, block_handle_A,
                                        STARPU_R, block_handle_B,
                                        STARPU_RW, block_handle_C,
-                                       0);
+                                       NULL);
 			if(err) { throw std::exception(); }
 			std::cout << "Task inserted [add] (handle_A=" << block_handle_A << ", handle_B=" << block_handle_B << ", handle_C=" << block_handle_C << ")" << std::endl;
 		}

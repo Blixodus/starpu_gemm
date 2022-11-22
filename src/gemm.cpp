@@ -17,13 +17,6 @@
 #define ENABLE_REDUX 0
 #endif
 
-#include "matrix/accumulate_func.hpp"
-#include "matrix/asserteq_func.hpp"
-#include "matrix/bzero_func.hpp"
-#include "matrix/cublas_perf.hpp"
-#include "matrix/fill_func.hpp"
-#include "matrix/gemm_func.hpp"
-#include "matrix/print_func.hpp"
 #include "matrix/matrix.hpp"
 
 void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {

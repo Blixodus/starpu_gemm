@@ -3,12 +3,13 @@
 #include <vector>
 #include <cstdio>
 #include <numeric>
+#include <tuple>
 
 
 /**
  * Compute common contiguous length for tensors
 */
-u32 compute_contiguous(size_t ntensor, size_t ndim, u32 *dim_size, u32 **ld, std::vector<std::vector<u32>> &lin_idx_vec) {
+std::tuple<u32, std::vector<std::vector<u32>>> compute_contiguous(size_t ntensor, size_t ndim, u32 *dim_size, u32 **ld) {
 	u32 cont_len = 1;
 	size_t cont_dim;
 
@@ -29,21 +30,18 @@ u32 compute_contiguous(size_t ntensor, size_t ndim, u32 *dim_size, u32 **ld, std
 
 	// Compute the number of non-contiguous starting indices
 	u32 noncont_elems = std::accumulate(dim_size+cont_dim, dim_size+ndim, 1, std::multiplies<u32>());
-
-	for(auto & lin_idx : lin_idx_vec) {
-		lin_idx = std::vector<u32>(noncont_elems, 0);
-	}
-
+  std::vector<std::vector<u32>> lin_idx_vec{ntensor, std::vector<u32>{}};
+  
 	// Compute non-contiguous starting indices
-  size_t e = 0;
-	for(auto & elem : DimIter(dim_size, ndim, cont_dim)) {
-		for(size_t dim = cont_dim; dim < ndim; dim++) {
-			for(size_t i = 0; i < ntensor; i++) {
-				lin_idx_vec[i][e] += elem[dim] * ld[i][dim];
+	for(auto & elem : DimIter{dim_size, ndim, cont_dim}) {
+    for(size_t i = 0; i < ntensor; i++) {
+      u32 curr_lin_idx = 0;
+      for(size_t dim = cont_dim; dim < ndim; dim++) {
+			  curr_lin_idx += elem[dim] * ld[i][dim];
 			}
+      lin_idx_vec[i].push_back(curr_lin_idx);
 		}
-    e++;
 	}
   
-	return cont_len;
+	return {cont_len, lin_idx_vec};
 }
