@@ -297,18 +297,14 @@ struct Matrix {
 						STARPU_VALUE, &transB, sizeof(transB),
 						STARPU_VALUE, &alpha, sizeof(alpha),
 						STARPU_VALUE, &beta, sizeof(beta),
-						STARPU_R, A_sub_handle, STARPU_R,
-						B_sub_handle,
+						STARPU_R, A_sub_handle,
+            STARPU_R, B_sub_handle,
 	#if ENABLE_REDUX != 0
 						STARPU_MPI_REDUX, C_sub_handle,
 	#else
 						STARPU_RW, C_sub_handle,
 	#endif
-						STARPU_FLOPS,
-						double(
-							2L * starpu_matrix_get_nx(C_sub_handle) *
-							starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)
-						),
+						STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
 						NULL
 					);
 

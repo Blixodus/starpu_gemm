@@ -11,7 +11,7 @@
 
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
-#define ENABLE_REDUX 1
+#define ENABLE_REDUX 0
 #else
 #warning "ENABLE_REDUX 0"
 #define ENABLE_REDUX 0
@@ -31,9 +31,9 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
-//   A.print('A');
-//   B.print('B');
-//   C.print('C');
+   A.print('A');
+   B.print('B');
+   C.print('C');
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
@@ -53,7 +53,7 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
-//   C.print('C');
+  C.print('C');
 }
 
 int main(int argc, char** argv) {
