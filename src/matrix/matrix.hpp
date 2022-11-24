@@ -120,6 +120,7 @@ static auto fill_cl = make_fill_cl<DataType>();
 template <typename DataType>
 starpu_codelet make_print_cl() {
 	return {
+		.can_execute = can_execute,
 		.cpu_funcs = {print_cpu_func<DataType>},
 #ifdef USE_CUDA
 		.cuda_funcs = {print_cuda_func<DataType>},
@@ -136,6 +137,7 @@ static auto print_cl = make_print_cl<DataType>();
 template <typename DataType>
 starpu_codelet make_asserteq_cl() {
 	return {
+		.can_execute = can_execute,
 		.cpu_funcs = {asserteq_cpu_func<DataType>},
 #ifdef USE_CUDA
 		.cuda_funcs = {asserteq_cuda_func<DataType>},
@@ -286,10 +288,10 @@ struct Matrix {
 
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
+        auto C_sub_handle = C.data_handle.get(i, j);
 				for (u32 k = 0; k < A.data_handle.col_blocks; k++) {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
-					auto C_sub_handle = C.data_handle.get(i, j);
 
 					auto err = starpu_mpi_task_insert(
 						MPI_COMM_WORLD, &gemm_cl<DataType>,
@@ -308,10 +310,10 @@ struct Matrix {
 						NULL
 					);
 
-					if (err) {
-						throw std::exception();
-					}
+					if (err) { throw std::exception(); }
 				}
+        auto err = starpu_mpi_redux_data(MPI_COMM_WORLD, C_sub_handle);
+        if (err) { throw std::exception(); }
 			}
 		}
 	}

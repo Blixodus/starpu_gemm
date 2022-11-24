@@ -20,20 +20,13 @@
 #include "matrix/matrix.hpp"
 
 void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
-	std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu
-			  << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
+	std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
 
 	Matrix<float> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
 
 	A.fill(1);
 	B.fill(1);
 	C.fill(0);
-
-	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-
-   A.print('A');
-   B.print('B');
-   C.print('C');
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
@@ -50,10 +43,6 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	// block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
 	C.assertEq(static_cast<float>(k));
-
-	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
-
-  C.print('C');
 }
 
 int main(int argc, char** argv) {
