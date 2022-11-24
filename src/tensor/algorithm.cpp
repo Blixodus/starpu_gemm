@@ -29,7 +29,7 @@ std::tuple<u32, std::vector<std::vector<u32>>> compute_contiguous(size_t ntensor
  cont_len_over:
 
 	// Compute the number of non-contiguous starting indices
-	u32 noncont_elems = std::accumulate(dim_size+cont_dim, dim_size+ndim, 1, std::multiplies<u32>());
+	//u32 noncont_elems = static_cast<u32>(std::accumulate(dim_size+cont_dim, dim_size+ndim, 1, std::multiplies<u32>()));
   std::vector<std::vector<u32>> lin_idx_vec{ntensor, std::vector<u32>{}};
   
 	// Compute non-contiguous starting indices
