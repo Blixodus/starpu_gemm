@@ -54,9 +54,9 @@ void print_cuda_func(void* buffers[], void* cl_args) {
 
 	dim3 threadsPerBlock(32, 32);
 	dim3 numBlocks(ceilDiv(M.rows, threadsPerBlock.x), ceilDiv(M.cols, threadsPerBlock.y));
-	print_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(
-		M.ptr, M.rows, M.cols, M.ld, c, row, col, bs
-	);
+	print_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(M.ptr, M.rows, M.cols, M.ld, c, row, col, bs);
+  cudaError_t error = cudaGetLastError();
+  if(error != cudaSuccess) { printf("[CUDA ERROR] %s\n", cudaGetErrorString(error)); }
 }
 
 template void print_cuda_func<float>(void* buffers[], void* cl_args);

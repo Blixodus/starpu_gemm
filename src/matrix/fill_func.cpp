@@ -47,6 +47,8 @@ void fill_cuda_func(void* buffers[], void* cl_args) {
 	dim3 numBlocks(ceilDiv(M.rows, threadsPerBlock.x), ceilDiv(M.cols, threadsPerBlock.y));
 
 	fill_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(M.ptr, M.rows, M.cols, M.ld, e);
+  cudaError_t error = cudaGetLastError();
+  if(error != cudaSuccess) { printf("[CUDA ERROR] %s\n", cudaGetErrorString(error)); }
 	cudaStreamSynchronize(starpu_cuda_get_local_stream());
 }
 

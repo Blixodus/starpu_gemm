@@ -49,9 +49,9 @@ void asserteq_cuda_func(void* buffers[], void* cl_args) {
 
 	dim3 threadsPerBlock(32, 32);
 	dim3 numBlocks(ceilDiv(M.rows, threadsPerBlock.x), ceilDiv(M.cols, threadsPerBlock.y));
-	asserteq_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(
-		M.ptr, M.rows, M.cols, M.ld, val
-	);
+	asserteq_kernel<<<numBlocks, threadsPerBlock, 0, starpu_cuda_get_local_stream()>>>(M.ptr, M.rows, M.cols, M.ld, val);
+  cudaError_t error = cudaGetLastError();
+  if(error != cudaSuccess) { printf("[CUDA ERROR] %s\n", cudaGetErrorString(error)); }
 }
 
 template void asserteq_cuda_func<float>(void* buffers[], void* cl_args);
