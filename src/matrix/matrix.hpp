@@ -31,6 +31,7 @@ starpu_codelet make_gemm_cl() {
 	};
 
 	return {
+    .name = "gemm",
 		.can_execute = can_execute,
 		.cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
@@ -58,6 +59,7 @@ starpu_codelet make_bzero_matrix_cl() {
 	};
 
 	return {
+    .name = "bzero",
 		.can_execute = can_execute,
 		.cpu_funcs = { bzero_matrix_cpu<DataType> },
 #ifdef USE_CUDA
@@ -80,6 +82,7 @@ starpu_codelet make_accumulate_matrix_cl() {
 	};
 
 	return {
+    .name = "accumulate",
 		.can_execute = can_execute,
 		.cpu_funcs = { accumulate_matrix_cpu<DataType> },
 #ifdef USE_CUDA
@@ -102,6 +105,7 @@ starpu_codelet make_fill_cl() {
 	};
 
 	return {
+    .name = "fill",
 		.can_execute = can_execute,
 		.cpu_funcs = { fill_cpu_func<DataType> },
 #ifdef USE_CUDA
@@ -120,6 +124,7 @@ static auto fill_cl = make_fill_cl<DataType>();
 template <typename DataType>
 starpu_codelet make_print_cl() {
 	return {
+    .name = "print",
 		.can_execute = can_execute,
 		.cpu_funcs = {print_cpu_func<DataType>},
 #ifdef USE_CUDA
@@ -137,6 +142,7 @@ static auto print_cl = make_print_cl<DataType>();
 template <typename DataType>
 starpu_codelet make_asserteq_cl() {
 	return {
+    .name = "asserteq",
 		.can_execute = can_execute,
 		.cpu_funcs = {asserteq_cpu_func<DataType>},
 #ifdef USE_CUDA
