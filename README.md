@@ -13,7 +13,7 @@ Tested as working using
 ### Build
 To build and run the experimental code
 ```
-cmake -B build
+cmake -B build [-DENABLE_CUDA=ON]
 cd build
 cmake --build .
 ./gemm [exp] [k_min] [k_max] [bs_min] [bs_max]
@@ -22,7 +22,7 @@ cmake --build .
 ### Guix
 This is integrated as a package in the [Guix HPC](https://gitlab.inria.fr/guix-hpc/guix-hpc) and [Guix HPC non-free](https://gitlab.inria.fr/guix-hpc/guix-hpc-non-free) repositories.
 
-To run the gemm example with CUDA run the following example command in your terminal
+To run the gemm example with CUDA run the following example command in your terminal (note : your CUDA driver must be more recent than the one in Guix)
 ```
 LD_PRELOAD=/usr/lib64/libcuda.so OMPI_MCA_btl=^openib OMPI_MCA_osc=^ucx OMPI_MCA_pml=^ucx guix shell --pure --preserve=^OMPI_MCA --preserve=^LD_PRELOAD --preserve=^SLURM slurm@22 starpu-example-cppgemm-cuda --with-branch=starpu-example-cppgemm-cuda=main --preserve=^STARPU --with-branch=starpu-cuda=master openssh -- srun -l gemm 3 3 3 2 2
 ```

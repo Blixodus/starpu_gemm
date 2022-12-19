@@ -1,14 +1,19 @@
 ** Guix (fonctionne sans CUDA sous PlaFRIM)
+#+BEGIN_SRC shell
 OMPI_MCA_btl=^openib OMPI_MCA_osc=^ucx OMPI_MCA_pml=^ucx guix shell --pure starpu-example-cppgemm chameleon slurm@22 --preserve=^OMPI_MCA --preserve=^SLURM --preserve=^STARPU --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
+#+END_SRC
 
 Ensuite lancer avec
 
+#+BEGIN_SRC shell
 gemm params
 chameleon_stesting params
 srun -l gemm params
 srun -l chameleon_stesting params
+#+END_SRC
 
 ** Modules
+#+BEGIN_SRC shell
 module load compiler/cuda/11.6
 module load compiler/gcc/11.2.0
 module load linalg/openblas/0.3.9
@@ -18,15 +23,19 @@ module load mpi/openmpi/4.0.3
 module load build/cmake/3.21.3
 module load linalg/lapacke/3.9.1
 module load tools/trace/likwid/4.0.3
+#+END_SRC
 
 ** Install New Madeleine (stable commit)
+#+BEGIN_SRC shell
 git clone https://gitlab.inria.fr/pm2/pm2.git
 cd pm2
 git checkout 7e3edd5002885d4a114c5e551106f28ae9630e01
 cd scripts
 ./pm2-build-packages ./madmpi.conf --prefix=$HOME/local
+#+END_SRC
 
 ** Install StarPU (stable fork)
+#+begin_src
 git clone https://github.com/Blixodus/starpu
 ./autogen.sh
 mkdir buildq
@@ -36,33 +45,46 @@ cd build
 # With nmad (works only on Rubik)
 ../configure --prefix=$HOME/local --enable-nmad
 make -j
-make install -j
+make install -j 
+#+end_src
 
 ** Important to set this environment
+#+begin_src
 source $HOME/local/bin/starpu_env
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=1 
+#+end_src
 
 ** Install chameleon
+#+begin_src
 git clone --recurse-submodules https://gitlab.inria.fr/solverstack/chameleon.git
 cd chameleon
 cmake -B build -DCHAMELEON_USE_CUDA=ON -DCHAMELEON_USE_MPI=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$HOME/local
 cd build
 make -j
-make install -j
+make install -j 
+#+end_src
 
 ** Build starpu_gemm
+#+begin_src
 git clone git@github.com:Blixodus/starpu_gemm.git
 cd starpu_gemm
 cmake -B build -DENABLE_CUDA=ON
 cd build
-make -j
+make -j 
+#+end_src
 
 ** MPI Check
-mpirun -n 2 --map-by node --tag-output hostname
+#+begin_src
+mpirun -n 2 --map-by node --tag-output hostname 
+#+end_src
 
 ** Run with MPI
+#+begin_src
 mpirun -n 2 --map-by node --tag-output gemm [exp] [k_min] [k_max] [bs_min] [bs_max]
-mpirun -n 2 --map-by node --tag-output chameleon_stesting -H -o gemm -m 20000 -n 20000 -k 2000 -b 2000 -g 2
+mpirun -n 2 --map-by node --tag-output chameleon_stesting -H -o gemm -m 20000 -n 20000 -k 2000 -b 2000 -g 2 
+#+end_src
 
 ** Run with nmad
-padico-launch -n 2
+#+begin_src
+padico-launch -n 2 
+#+end_src
