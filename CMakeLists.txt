@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.3)
 project(gemm LANGUAGES CXX C) # LANGUAGES CXX)
 
+include("cmake/extends.cmake")
+
 # Define the compilation options of the project
 # ---------------------------------------------
 
@@ -137,10 +139,6 @@ find_package(M REQUIRED)
 set( CBLAS_MT FALSE )
 find_package(CBLAS REQUIRED)
 
-# Search for lapacke in sequential
-set( LAPACKE_MT FALSE )
-find_package(LAPACKE REQUIRED)
-
 # Add libraries
 # -------------
 
@@ -180,16 +178,12 @@ if(ENABLE_CUDA)
   set_source_files_properties( ${gemmlib_srcs} PROPERTIES LANGUAGE CUDA)
 endif()
 
-if(ENABLE_MPI)
-  target_link_libraries( gemmlib PUBLIC MPI::MPI_CXX )
-endif()
-if(ENABLE_STARPU)
-  target_link_libraries( gemmlib PRIVATE MORSE::STARPU )
-endif()
-target_link_libraries( gemmlib PUBLIC OpenMP::OpenMP_CXX )
-target_link_libraries( gemmlib PUBLIC MORSE::LAPACKE )
-target_link_libraries( gemmlib PUBLIC MORSE::CBLAS   )
-target_link_libraries( gemmlib PUBLIC MORSE::M       )
+
+target_link_libraries_if(${ENABLE_MPI} gemmlib PUBLIC MPI::MPI_CXX)
+target_link_libraries_if(${ENABLE_STARPU} gemmlib PRIVATE MORSE::STARPU)
+target_link_libraries(gemmlib PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(gemmlib PUBLIC MORSE::CBLAS)
+target_link_libraries(gemmlib PUBLIC MORSE::M)
 
 install(TARGETS gemmlib
   RUNTIME DESTINATION bin
@@ -200,21 +194,14 @@ install(TARGETS gemmlib
 
 add_executable(gemm src/gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
+target_link_libraries_if(${ENABLE_CUDA} gemm PRIVATE CUDA::cublas)
+target_link_libraries_if(${ENABLE_MPI} gemm PUBLIC MPI::MPI_CXX)
+target_link_libraries_if(${ENABLE_STARPU} gemm PUBLIC MORSE::STARPU)
 
 add_executable(getm src/getm.cpp)
 target_link_libraries(getm PRIVATE gemmlib)
-
-if(ENABLE_CUDA)
-  target_link_libraries(gemm PRIVATE CUDA::cublas)
-  target_link_libraries(getm PRIVATE CUDA::cublas)
-endif()
-if (ENABLE_MPI)
-  target_link_libraries(gemm PUBLIC MPI::MPI_CXX)
-  target_link_libraries(getm PUBLIC MPI::MPI_CXX)
-endif (ENABLE_MPI)
-if (ENABLE_STARPU)
-  target_link_libraries(gemm PUBLIC MORSE::STARPU)
-  target_link_libraries(getm PUBLIC MORSE::STARPU)
-endif (ENABLE_STARPU)
+target_link_libraries_if(${ENABLE_CUDA} getm PRIVATE CUDA::cublas)
+target_link_libraries_if(${ENABLE_MPI} getm PUBLIC MPI::MPI_CXX)
+target_link_libraries_if(${ENABLE_STARPU} getm PUBLIC MORSE::STARPU)
 
 install(TARGETS gemm RUNTIME DESTINATION bin)

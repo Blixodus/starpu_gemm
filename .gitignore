@@ -3,6 +3,7 @@ results
 figures
 build
 .build
+.cache
 
 # StarPU data and trace files
 *.gp
