@@ -1,9 +1,9 @@
-** Guix (fonctionne sans CUDA sous PlaFRIM)
+** Guix (PlaFRIM : Works only without CUDA)
 #+BEGIN_SRC shell
 OMPI_MCA_btl=^openib OMPI_MCA_osc=^ucx OMPI_MCA_pml=^ucx guix shell --pure starpu-example-cppgemm chameleon slurm@22 --preserve=^OMPI_MCA --preserve=^SLURM --preserve=^STARPU --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
 #+END_SRC
 
-Ensuite lancer avec
+In Guix shell execute with
 
 #+BEGIN_SRC shell
 gemm params
