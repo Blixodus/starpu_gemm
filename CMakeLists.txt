@@ -11,6 +11,7 @@ option( ENABLE_MPI "Define if MPI support should be enabled" ON )
 
 # Option to enable/disable the StarPU package
 option( ENABLE_STARPU "Define if StarPU support is enabled or not" ON )
+option( ENABLE_STARPU_MPI_REDUX "Define if StarPU MPI reductions should be activated (if supported)" ON )
 
 # Option to enable/disable CUDA support
 option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
@@ -123,14 +124,14 @@ int main(void) {
 "
     HAVE_STARPU_MPI_REDUX
   )
-  if ( HAVE_STARPU_MPI_REDUX )
+  if ( HAVE_STARPU_MPI_REDUX AND ENABLE_STARPU_MPI_REDUX )
     message("-- ${Blue}Add definition HAVE_STARPU_MPI_REDUX${ColourReset}")
     add_compile_definitions(HAVE_STARPU_MPI_REDUX)
   endif()
 endif()
 
 # Search for OpenMP
-find_package(OpenMP REQUIRED)
+find_package(OpenMP REQUIRED QUIET)
 
 # Search for libm
 find_package(M REQUIRED)
@@ -152,11 +153,11 @@ set( gemmlib_srcs
   src/matrix/cublas_perf.cpp
   src/matrix/asserteq_func.cpp
 
-  src/tensor/algorithm.cpp
-  src/tensor/tensor_add_func.cpp
-  src/tensor/tensor_fill_func.cpp
-  src/tensor/tensor_print_func.cpp
-  src/tensor/tensor_asserteq_func.cpp
+  # src/tensor/algorithm.cpp
+  # src/tensor/tensor_add_func.cpp
+  # src/tensor/tensor_fill_func.cpp
+  # src/tensor/tensor_print_func.cpp
+  # src/tensor/tensor_asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )
@@ -198,10 +199,10 @@ target_link_libraries_if(${ENABLE_CUDA} gemm PRIVATE CUDA::cublas)
 target_link_libraries_if(${ENABLE_MPI} gemm PUBLIC MPI::MPI_CXX)
 target_link_libraries_if(${ENABLE_STARPU} gemm PUBLIC MORSE::STARPU)
 
-add_executable(getm src/getm.cpp)
-target_link_libraries(getm PRIVATE gemmlib)
-target_link_libraries_if(${ENABLE_CUDA} getm PRIVATE CUDA::cublas)
-target_link_libraries_if(${ENABLE_MPI} getm PUBLIC MPI::MPI_CXX)
-target_link_libraries_if(${ENABLE_STARPU} getm PUBLIC MORSE::STARPU)
+# add_executable(getm src/getm.cpp)
+# target_link_libraries(getm PRIVATE gemmlib)
+# target_link_libraries_if(${ENABLE_CUDA} getm PRIVATE CUDA::cublas)
+# target_link_libraries_if(${ENABLE_MPI} getm PUBLIC MPI::MPI_CXX)
+# target_link_libraries_if(${ENABLE_STARPU} getm PUBLIC MORSE::STARPU)
 
 install(TARGETS gemm RUNTIME DESTINATION bin)
