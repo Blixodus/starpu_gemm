@@ -2,7 +2,8 @@
 
 ** Guix setup
 
-To setup Guix correctly add these to your ~$HOME/.bash_profile~. Set ~[username]~ to your username.
+To setup Guix correctly add these to your ~$HOME/.bash_profile~
+Set ~[username]~ to your username
 
 #+begin_src shell
   . /var/guix/profiles/per-user/[username]/current-guix/etc/bash_completion.d/guix
@@ -16,7 +17,7 @@ To setup Guix correctly add these to your ~$HOME/.bash_profile~. Set ~[username]
   . "$GUIX_PROFILE/etc/profile"
 #+end_src
 
-To setup your Guix environment you will need the correct channels (Guix-HPC and Guix-HPC-non-free). Add these to ~$HOME/.config/guix/channels.scm~.
+To setup your Guix environment you will need the correct channels (Guix-HPC and Guix-HPC-non-free). Add these to ~$HOME/.config/guix/channels.scm~
 
 #+begin_src scheme
   (list (channel
@@ -30,6 +31,8 @@ To setup your Guix environment you will need the correct channels (Guix-HPC and 
          (url "https://git.savannah.gnu.org/git/guix.git")))
 #+end_src
 
+Do not forget to ~guix pull~
+
 ** Environment variables to set
 #+begin_src shell
   export OMP_NUM_THREADS=1     #Set OpenMP thread number to 1 to avoid conflicts with the StarPU scheduler
@@ -42,11 +45,13 @@ To setup your Guix environment you will need the correct channels (Guix-HPC and 
 #+end_src
 
 ** Execute code (PlaFRIM : Works only without CUDA)
+You can create a Guix shell with the GEMM example and Chameleon using the following command
+
 #+BEGIN_SRC shell
   guix shell --pure --preserve="^OMPI_MCA|^SLURM|^STARPU|^OMP" starpu-example-cppgemm chameleon openssh slurm@22 --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
 #+END_SRC
 
-In Guix shell execute with e.g.
+In the Guix shell you can execute with e.g.
 
 #+BEGIN_SRC shell
   gemm params
