@@ -1,16 +1,81 @@
-** Guix (PlaFRIM : Works only without CUDA)
+* With Guix
+
+** Guix setup
+
+To setup Guix correctly add these to your ~$HOME/.bash_profile~
+
+#+begin_src shell
+  ####################
+  # guix environment #
+  ####################
+
+  . /var/guix/profiles/per-user/[username]/current-guix/etc/bash_completion.d/guix
+
+  export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale
+
+  GUIX_PROFILE="/home/[username]/.config/guix/current"
+  . "$GUIX_PROFILE/etc/profile"
+
+  GUIX_PROFILE="/home/[username]/.guix-profile"
+  . "$GUIX_PROFILE/etc/profile"
+
+  ###############################################
+  # guix extra profiles activation              #
+  # see: ~/.guix-extra-manifests/etc/README.org #
+  ###############################################
+
+  # . ~/.guix-extra-manifests/etc/bash_profile.extra
+
+  #########################################################################################
+  # guix modules                                                                          #
+  # see: https://gitlab.inria.fr/guix-hpc/guix-modules                                    #
+  # see: https://hpc.guix.info/blog/2022/05/back-to-the-future-modules-for-guix-packages/ #
+  #########################################################################################
+
+  # The package guix-modules is installed in extra-profiles (extensions-manifest.scm)
+  # export GUIX_EXTENSIONS_PATH="$HOME/.guix-profile/share/guix/extensions"
+#+end_src
+
+To setup your Guix environment you will need the correct channels (Guix-HPC and Guix-HPC-non-free). Add these to ~$HOME/.config/guix/channels.scm~
+
+#+begin_src scheme
+  (list (channel
+         (name 'guix-hpc-non-free)
+         (url "https://gitlab.inria.fr/guix-hpc/guix-hpc-non-free.git"))
+        (channel
+         (name 'guix-hpc)
+         (url "https://gitlab.inria.fr/guix-hpc/guix-hpc.git"))
+        (channel
+         (name 'guix)
+         (url "https://git.savannah.gnu.org/git/guix.git")))
+#+end_src
+
+** Environment variables to set
+#+begin_src shell
+  OMP_NUM_THREADS=1     #Set OpenMP thread number to 1 to avoid conflicts with the StarPU scheduler
+  STARPU_RESERVE_NCPU=1 #Reserve 1 CPU to be used by StarPU for other things than task execution
+  STARPU_SCHED=lws      #Set the StarPU scheduler to lws (or other)
+
+  OMPI_MCA_btl=^openib  #Set these to avoid some MPI errors (optional - the errors are not real)
+  OMPI_MCA_osc=^ucx
+  OMPI_MCA_pml=^ucx
+#+end_src
+
+** Execute code (PlaFRIM : Works only without CUDA)
 #+BEGIN_SRC shell
-OMPI_MCA_btl=^openib OMPI_MCA_osc=^ucx OMPI_MCA_pml=^ucx guix shell --pure starpu-example-cppgemm chameleon slurm@22 --preserve=^OMPI_MCA --preserve=^SLURM --preserve=^STARPU --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
+  guix shell --pure --preserve="^OMPI_MCA|^SLURM|^STARPU|^OMP" starpu-example-cppgemm chameleon openssh slurm@22 --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
 #+END_SRC
 
-In Guix shell execute with
+In Guix shell execute with e.g.
 
 #+BEGIN_SRC shell
-gemm params
-chameleon_stesting params
-srun -l gemm params
-srun -l chameleon_stesting params
+  gemm params
+  chameleon_stesting params
+  srun -l gemm params
+  srun -l chameleon_stesting params
 #+END_SRC
+
+* Without Guix
 
 ** Modules
 #+BEGIN_SRC shell
@@ -42,7 +107,7 @@ mkdir buildq
 cd build
 # Without nmad (works on Rubik/PlaFRIM)
 ../configure --prefix=$HOME/local
-# With nmad (works only on Rubik)
+# With nmad (works only on Rubik)'
 ../configure --prefix=$HOME/local --enable-nmad
 make -j
 make install -j 
