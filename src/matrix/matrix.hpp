@@ -318,8 +318,10 @@ struct Matrix {
 
 					if (err) { throw std::exception(); }
 				}
+#if ENABLE_REDUX != 0
         auto err = starpu_mpi_redux_data(MPI_COMM_WORLD, C_sub_handle);
         if (err) { throw std::exception(); }
+#endif
 			}
 		}
 	}
