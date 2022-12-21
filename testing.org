@@ -54,10 +54,10 @@ You can create a Guix shell with the GEMM example and Chameleon using the follow
 In the Guix shell you can execute with e.g.
 
 #+BEGIN_SRC shell
-  gemm params
-  chameleon_stesting params
-  srun -l gemm params
-  srun -l chameleon_stesting params
+  gemm [params]
+  chameleon_stesting [params]
+  srun -l gemm [params]
+  srun -l chameleon_stesting [params]
 #+END_SRC
 
 * Without Guix
