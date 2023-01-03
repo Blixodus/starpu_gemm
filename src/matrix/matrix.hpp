@@ -316,7 +316,7 @@ struct Matrix {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
 
-          if(rank == A.get_owner(i, k) || rank == B.get_owner(k, j) || rank == C.get_owner(i, j)) {
+          if(rank == A.data_handle.get_owner(i, k) || rank == B.data_handle.get_owner(k, j) || rank == C.data_handle.get_owner(i, j)) {
             auto err = starpu_mpi_task_insert(
                                               MPI_COMM_WORLD, &gemm_cl<DataType>,
                                               STARPU_VALUE, &transA, sizeof(transA),
