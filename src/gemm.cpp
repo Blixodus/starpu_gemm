@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
   parseArgs(argc, argv, m, n, k_min, k_max, b_min, b_max, conf);
 
 	std::ofstream resultFile;
-	/*
+	/* 
 	char buffer[50];
 	sprintf(buffer, "results/results_%s_%s_%s_%d_%d.csv", std::getenv("STARPU_SCHED"),
   TWODIM?"2D":"1D", ENABLE_REDUX?"RED":"NONRED", m, n); std::cerr << "Printing results in " <<
