@@ -162,11 +162,13 @@ template <typename DataType>
 struct MatrixData {
 	u32 row_blocks, col_blocks;
 	std::vector<starpu_data_handle_t> data_handle;
+  std::vector<int> owner_node;
 
 	MatrixData(u32 rows, u32 cols, u32 block_size)
 		: row_blocks(ceilDiv(rows, block_size)),
 		  col_blocks(ceilDiv(cols, block_size)),
-		  data_handle(row_blocks * col_blocks) {
+		  data_handle(row_blocks * col_blocks),
+      owner_node(row_blocks * col_blocks) {
 		int rank, size;
 
 		starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
@@ -182,8 +184,10 @@ struct MatrixData {
 				auto rows_block = (i == row_blocks - 1) ? row_final : block_size;
 				auto cols_block = (j == col_blocks - 1) ? col_final : block_size;
 
+        set_owner(i, j, static_cast<int>(i + j) % size);
+
 				starpu_matrix_data_register(&handle, -1, 0, rows_block, rows_block, cols_block, sizeof(DataType));
-				starpu_mpi_data_register(handle, matrix_mpi_tag++, static_cast<int>(i + j) % size);
+				starpu_mpi_data_register(handle, matrix_mpi_tag++, get_owner(i, j));
 			}
 		}
 	}
@@ -196,6 +200,14 @@ struct MatrixData {
 
 	starpu_data_handle_t& get(u32 i, u32 j) {
 		return data_handle[i + j * row_blocks];
+	}
+
+	int get_owner(u32 i, u32 j) {
+		return owner_node[i + j * row_blocks];
+	}
+
+	void set_owner(u32 i, u32 j, int owner) {
+		owner_node[i + j * row_blocks] = owner;
 	}
 };
 
@@ -279,6 +291,11 @@ struct Matrix {
 		DataType beta,
 		Matrix<DataType>& C
 	) {
+		int rank, size;
+
+		starpu_mpi_comm_rank(MPI_COMM_WORLD, &rank);
+		starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
+    
 		assert(A.rows == C.rows);
 		assert(B.cols == C.cols);
 		assert(A.cols == B.rows);
@@ -299,24 +316,25 @@ struct Matrix {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
 
-					auto err = starpu_mpi_task_insert(
-						MPI_COMM_WORLD, &gemm_cl<DataType>,
-						STARPU_VALUE, &transA, sizeof(transA),
-						STARPU_VALUE, &transB, sizeof(transB),
-						STARPU_VALUE, &alpha, sizeof(alpha),
-						STARPU_VALUE, &beta, sizeof(beta),
-						STARPU_R, A_sub_handle,
-            STARPU_R, B_sub_handle,
-	#if ENABLE_REDUX != 0
-						STARPU_MPI_REDUX, C_sub_handle,
-	#else
-						STARPU_RW, C_sub_handle,
-	#endif
-						STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
-						NULL
-					);
-
-					if (err) { throw std::exception(); }
+          if(rank == A.get_owner(i, k) || rank == B.get_owner(k, j) || rank == C.get_owner(i, j)) {
+            auto err = starpu_mpi_task_insert(
+                                              MPI_COMM_WORLD, &gemm_cl<DataType>,
+                                              STARPU_VALUE, &transA, sizeof(transA),
+                                              STARPU_VALUE, &transB, sizeof(transB),
+                                              STARPU_VALUE, &alpha, sizeof(alpha),
+                                              STARPU_VALUE, &beta, sizeof(beta),
+                                              STARPU_R, A_sub_handle,
+                                              STARPU_R, B_sub_handle,
+#if ENABLE_REDUX != 0
+                                              STARPU_MPI_REDUX, C_sub_handle,
+#else
+                                              STARPU_RW, C_sub_handle,
+#endif
+                                              STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
+                                              NULL
+                                              );
+            if (err) { throw std::exception(); }
+          }
 				}
 #if ENABLE_REDUX != 0
         auto err = starpu_mpi_redux_data(MPI_COMM_WORLD, C_sub_handle);

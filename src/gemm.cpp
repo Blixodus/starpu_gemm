@@ -3,11 +3,13 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <numeric>
 #include <vector>
-
+#include <string>
+#include <string_view>
 
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
@@ -45,18 +47,45 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 	C.assertEq(static_cast<float>(k));
 }
 
+char* getArg(int argc, char** argv, std::string_view arg) {
+  char** begin = argv;
+  char** end = argv + argc;
+  char** itr = std::find(begin, end, arg);
+  if(itr != end && itr++ != end) {
+    return *itr;
+  }
+  return 0;
+}
+
+bool hasArg(int argc, char** argv, std::string_view arg) {
+  char** begin = argv;
+  char** end = argv+argc;
+  return (std::find(begin, end, arg) != end);
+}
+
+void printHelp() {
+  std::cout << "Parameters for gemm:" << std::endl
+            << "  -m     --  Set the size of M (as log)" << std::endl
+            << "  -n     --  Set the size of N (as log)" << std::endl
+            << "  -k     --  Set the size of K (as log)" << std::endl
+            << "  -b     --  Set the block size (as log)" << std::endl
+            << "  -g     --  Set the number of GPUs used for task execution" << std::endl
+            << "  --perf-test  --  Test CUBLAS performace on given sizes" << std::endl;
+}
+
+void parseArgs(int argc, char** argv, u32& m, u32& n, u32& k_min, u32& k_max, u32& b_min, u32& b_max, starpu_conf& conf) {
+  if(hasArg(argc, argv, "-h")) { printHelp(); exit(0); }
+  m = 1<<((hasArg(argc, argv, "-m")) ? stoui(getArg(argc, argv, "-m")) : 10);
+  n = 1<<((hasArg(argc, argv, "-n")) ? stoui(getArg(argc, argv, "-n")) : 10);
+  k_min = k_max = ((hasArg(argc, argv, "-k")) ? stoui(getArg(argc, argv, "-k")) : 10);
+  b_min = b_max = ((hasArg(argc, argv, "-b")) ? stoui(getArg(argc, argv, "-b")) : 10);
+}
+
 int main(int argc, char** argv) {
-	if (argc != 6) {
-		std::cerr << "Usage : " << argv[0] << " [exp] [k_min] [k_max] [bs_min] [bs_max]" << std::endl;
-		return 1;
-	}
-	const u32 exp = stoui(argv[1]);
-	const u32 k_min = stoui(argv[2]);
-	const u32 k_max = std::min(stoui(argv[3]), exp);
-	const u32 b_min = stoui(argv[4]);
-	const u32 b_max = std::min(stoui(argv[5]), exp);
-	const u32 m = 1 << exp;
-	const u32 n = 1 << exp;
+	u32  m, n, k_min, k_max, b_min, b_max;
+  starpu_conf conf;
+  starpu_conf_init(&conf);
+  parseArgs(argc, argv, m, n, k_min, k_max, b_min, b_max, conf);
 
 	std::ofstream resultFile;
 	/*
@@ -65,21 +94,18 @@ int main(int argc, char** argv) {
   TWODIM?"2D":"1D", ENABLE_REDUX?"RED":"NONRED", m, n); std::cerr << "Printing results in " <<
   buffer << std::endl; resultFile.open(buffer); resultFile << "CPU;GPU;M;N;K;BLOCK;TFLOPS" <<
   std::endl;
+  */
 
-  #ifdef USE_CUDA
-	for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
-	  const int k = 1<<k_exp;
-	  cublas_perf_test(m, n, k, true, resultFile);
-	}
-  #endif
-	*/
+#ifdef USE_CUDA
+  if(hasArg(argc, argv, "--perf-test")) {
+    for(int k_exp = k_min; k_exp <= k_max; k_exp++) {
+      const int k = 1<<k_exp;
+      cublas_perf_test(m, n, k, true, resultFile);
+    }
+  }
+#endif
 
-	int err = starpu_init(NULL);
-	if (err) {
-		throw std::exception();
-	}
-
-	err = starpu_mpi_init(&argc, &argv, 1);
+	int err = starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, &conf);
 	if (err) {
 		throw std::exception();
 	}
@@ -100,9 +126,7 @@ int main(int argc, char** argv) {
 	starpu_cublas_shutdown();
 #endif
 	starpu_mpi_shutdown();
-	starpu_shutdown();
 
 	// resultFile.close();
-	// std::cout << buffer << std::endl;
 	return 0;
 }
