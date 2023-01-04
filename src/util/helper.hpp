@@ -74,7 +74,6 @@ constexpr MatrixInfo<T> as_matrix(void* ptr) {
 	};
 }
 
-/*
 template <typename T>
 struct TensorInfo {
 	T* ptr;
@@ -94,7 +93,6 @@ constexpr TensorInfo<T> as_tensor(void* ptr) {
 		.ndim = iface->ndim
 	};
 }
-*/
 
 template <typename T>
 inline constexpr T ceilDiv(T a, T b) noexcept {

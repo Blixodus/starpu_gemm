@@ -7,7 +7,7 @@
 #include "cublas_perf.hpp"
 
 #ifdef USE_CUDA
-void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) {
+void cublas_perf_test(int m, int n, int k, bool pin) {
 	std::cerr << "================= BEGIN CUBLAS PERF TEST ===============" << std::endl;
 
 	cudaError_t cudaStat;
@@ -89,9 +89,6 @@ void cublas_perf_test(int m, int n, int k, bool pin, std::ofstream& resultFile) 
 	std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - startAB;
 	std::cerr << "Time : " << time.count() << "s" << std::endl;
 	std::cerr << "Performance : " << 2.0 * m * n * k / time.count() / 1e9 << "Gflop/s" << std::endl;
-
-	resultFile << 0 << ";" << 0 << ";" << m << ";" << n << ";" << k << ";" << 0 << ";"
-			   << 2.0 * m * n * k / time.count() / 1e12 << std::endl;
 
 	cudaFree(d_A);
 	cudaFree(d_B);
