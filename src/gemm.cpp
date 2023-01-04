@@ -10,6 +10,9 @@
 #include <vector>
 #include <string>
 #include <string_view>
+#include <fmt/core.h>
+
+#include "matrix/matrix.hpp"
 
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
@@ -19,32 +22,31 @@
 #define ENABLE_REDUX 0
 #endif
 
-#include "matrix/matrix.hpp"
 
 void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
-	std::cerr << "2D=" << TWODIM << " Reduction=" << ENABLE_REDUX << " CPU=" << enable_cpu << " GPU=" << enable_gpu << " M=" << m << " N=" << n << " K=" << k << " BS=" << block_size << std::endl;
+	fmt::print("2D={} Reduction={} CPU={} GPU={} M={} N={} K={} BS={}\n", TWODIM, ENABLE_REDUX, enable_cpu, enable_gpu, m, n, k, block_size);
 
-	Matrix<float> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
+	Matrix<double> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
 
 	A.fill(1);
-	B.fill(1);
+	B.fill(3);
 	C.fill(0);
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+	Matrix<double>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
 	std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
-	std::cerr << "StarPU -- Time : " << time.count() << "s\n";
-	std::cerr << "StarPU -- Performance : " << 2.0 * m * n * k / time.count() / 1e12 << "Tflop/s" << std::endl;
+	fmt::print("StarPU -- Time : {}s\n", time.count());
+	fmt::print("StarPU -- Performance : {:.3f}Tflop/s\n", 2.0 * m * n * k / time.count() / 1e12);
 
 	// resultFile << enable_cpu << ";" << enable_gpu << ";" << m << ";" << n << ";" << k << ";" <<
 	// block_size << ";" << 2L * m * n * k / time.count() / 1e12 << std::endl;
 
-	C.assertEq(static_cast<float>(k));
+	C.assertEq(static_cast<float>(k * 3));
 }
 
 char* getArg(int argc, char** argv, std::string_view arg) {
@@ -83,9 +85,9 @@ void parseArgs(int argc, char** argv, u32& m, u32& n, u32& k_min, u32& k_max, u3
 
 int main(int argc, char** argv) {
 	u32  m, n, k_min, k_max, b_min, b_max;
-  starpu_conf conf;
-  starpu_conf_init(&conf);
-  parseArgs(argc, argv, m, n, k_min, k_max, b_min, b_max, conf);
+	starpu_conf conf;
+	starpu_conf_init(&conf);
+	parseArgs(argc, argv, m, n, k_min, k_max, b_min, b_max, conf);
 
 	std::ofstream resultFile;
 	/* 
@@ -105,8 +107,7 @@ int main(int argc, char** argv) {
   }
 #endif
 
-	int err = starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, &conf);
-	if (err) {
+	if (starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
 		throw std::exception();
 	}
 

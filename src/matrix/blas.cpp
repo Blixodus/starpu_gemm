@@ -76,15 +76,6 @@ template struct blas<float>;
 template struct blas<double>;
 
 #ifdef USE_CUDA
-cublasOperation_t convertToCublas(char trans) {
-	switch (trans) {
-		case 'N': return CUBLAS_OP_N;
-		case 'T': return CUBLAS_OP_T;
-		case 'C': return CUBLAS_OP_C;
-		default: throw std::exception();
-	}
-}
-
 template <typename DataType>
 void cublas<DataType>::gemm(
 	cublasHandle_t handle,

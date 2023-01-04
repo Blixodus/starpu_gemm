@@ -24,21 +24,19 @@ void test_tensor() {
 }
 
 int main(int argc, char ** argv) {
-  std::vector<u32> size = {2, 4, 3};
-  for(auto dim : DimIter(size, 1)) {
-    std::cout << VecPrinter(dim) << std::endl;
-  }
-  
-	int err = starpu_init(NULL);
-	if(err) { throw std::exception(); }
-	err = starpu_mpi_init(&argc, &argv, 1);
-	if (err) { throw std::exception(); }
+	std::vector<u32> size = {2, 4, 3};
+	for(auto dim : DimIter(size, 1)) {
+		std::cout << VecPrinter(dim) << std::endl;
+	}
+
+	if (starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
+		throw std::exception();
+	}
+
 	starpu_cublas_init();
 
 	test_tensor();
 	
 	starpu_cublas_shutdown();
 	starpu_mpi_shutdown();
-	starpu_shutdown();
-	return 0;
 }

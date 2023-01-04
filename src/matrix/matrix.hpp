@@ -32,7 +32,7 @@ starpu_codelet make_gemm_cl() {
 
 	return {
 		.can_execute = can_execute,
-		.cpu_funcs = { gemm_cpu_func<DataType> },
+		// .cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
 		.cuda_funcs = { gemm_cuda_func<DataType> },
 		.cuda_flags = { STARPU_CUDA_ASYNC },
@@ -107,10 +107,10 @@ starpu_codelet make_fill_cl() {
 	return {
 		.can_execute = can_execute,
 		.cpu_funcs = { fill_cpu_func<DataType> },
-#ifdef USE_CUDA
-		.cuda_funcs = { fill_cuda_func<DataType> },
-		.cuda_flags = { STARPU_CUDA_ASYNC },
-#endif
+// #ifdef USE_CUDA
+// 		.cuda_funcs = { fill_cuda_func<DataType> },
+// 		.cuda_flags = { STARPU_CUDA_ASYNC },
+// #endif
 		.nbuffers = 1,
 		.modes = { STARPU_W },
 		.model = &model,
@@ -145,8 +145,8 @@ starpu_codelet make_asserteq_cl() {
 		.can_execute = can_execute,
 		.cpu_funcs = {asserteq_cpu_func<DataType>},
 #ifdef USE_CUDA
-		.cuda_funcs = {asserteq_cuda_func<DataType>},
-		.cuda_flags = { STARPU_CUDA_ASYNC },
+		// .cuda_funcs = {asserteq_cuda_func<DataType>},
+		// .cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
 		.nbuffers = 1,
 		.modes = {STARPU_R},
@@ -311,7 +311,8 @@ struct Matrix {
 
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
-        auto C_sub_handle = C.data_handle.get(i, j);
+        		auto C_sub_handle = C.data_handle.get(i, j);
+				
 				for (u32 k = 0; k < A.data_handle.col_blocks; k++) {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
@@ -342,5 +343,17 @@ struct Matrix {
 #endif
 			}
 		}
+	}
+
+	static void ppgemm(
+		char transA,
+		char transB,
+		DataType alpha,
+		Matrix<DataType>& A,
+		Matrix<DataType>& B,
+		DataType beta,
+		Matrix<DataType>& C
+	) {
+
 	}
 };

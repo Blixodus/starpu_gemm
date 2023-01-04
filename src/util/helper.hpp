@@ -9,6 +9,9 @@
 #include "make_array.hpp"
 #include "dim_iter.hpp"
 
+#include "cuda_fp16.h"
+#include "cuda_bf16.h"
+
 // newtypes
 
 using u8 = uint8_t;
@@ -24,6 +27,9 @@ using i64 = int64_t;
 using f32 = float;
 using f64 = double;
 
+using f16 = __half;
+using bf16 = __nv_bfloat16;
+
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
 #define STARPU_MATRIX_ROWS(x) STARPU_MATRIX_GET_NX((x))
 #define STARPU_MATRIX_COLS(x) STARPU_MATRIX_GET_NY((x))
@@ -32,6 +38,19 @@ inline starpu_data_access_mode operator|(starpu_data_access_mode a, starpu_data_
 	using T = std::underlying_type_t<starpu_data_access_mode>;
 	return static_cast<starpu_data_access_mode>(static_cast<T>(a) | static_cast<T>(b));
 }
+
+#ifdef USE_CUDA
+#include "cublas_v2.h"
+
+inline cublasOperation_t convertToCublas(char trans) {
+	switch (trans) {
+		case 'N': return CUBLAS_OP_N;
+		case 'T': return CUBLAS_OP_T;
+		case 'C': return CUBLAS_OP_C;
+		default: throw std::exception();
+	}
+}
+#endif
 
 template <typename T>
 struct MatrixInfo {

@@ -19,7 +19,6 @@ option( ENABLE_CUDA "Define if CUDA support is enabled or not" OFF )
 add_compile_options(
   -Wall -Wextra # base warnings
   -Wfloat-equal # prevent comparing floats with ==
-  -Wold-style-cast # c-style casts
   -Wconversion -Wsign-conversion # type conversion
   -Wformat=2 # check printf-style templates string
   # -Wpadded
@@ -61,6 +60,8 @@ set( CMAKE_BUILD_WITH_INSTALL_RPATH FALSE )
 
 # Build shared libraries
 set( BUILD_SHARED_LIBS ON )
+
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 # Check that the submodule exists and is up to date
 # -------------------------------------------------
@@ -140,6 +141,9 @@ find_package(M REQUIRED)
 set( CBLAS_MT FALSE )
 find_package(CBLAS REQUIRED)
 
+# search for fmtlib
+find_package(fmt CONFIG REQUIRED)
+
 # Add libraries
 # -------------
 
@@ -153,11 +157,13 @@ set( gemmlib_srcs
   src/matrix/cublas_perf.cpp
   src/matrix/asserteq_func.cpp
 
-  # src/tensor/algorithm.cpp
-  # src/tensor/tensor_add_func.cpp
-  # src/tensor/tensor_fill_func.cpp
-  # src/tensor/tensor_print_func.cpp
-  # src/tensor/tensor_asserteq_func.cpp
+  src/ppmatrix/ppmatrix.cu
+
+  src/tensor/algorithm.cpp
+  src/tensor/tensor_add_func.cpp
+  src/tensor/tensor_fill_func.cpp
+  src/tensor/tensor_print_func.cpp
+  src/tensor/tensor_asserteq_func.cpp
 )
 
 add_library( gemmlib ${gemmlib_srcs} )
@@ -181,10 +187,13 @@ endif()
 
 
 target_link_libraries_if(${ENABLE_MPI} gemmlib PUBLIC MPI::MPI_CXX)
-target_link_libraries_if(${ENABLE_STARPU} gemmlib PRIVATE MORSE::STARPU)
+target_link_libraries_if(${ENABLE_STARPU} gemmlib PUBLIC MORSE::STARPU)
+target_link_libraries_if(${ENABLE_CUDA} gemmlib PUBLIC CUDA::cublas)
+target_link_libraries_if(${ENABLE_CUDA} gemmlib PUBLIC CUDA::cudart)
 target_link_libraries(gemmlib PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(gemmlib PUBLIC MORSE::CBLAS)
 target_link_libraries(gemmlib PUBLIC MORSE::M)
+target_link_libraries(gemmlib PUBLIC fmt::fmt-header-only)  
 
 install(TARGETS gemmlib
   RUNTIME DESTINATION bin
@@ -195,14 +204,11 @@ install(TARGETS gemmlib
 
 add_executable(gemm src/gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
-target_link_libraries_if(${ENABLE_CUDA} gemm PRIVATE CUDA::cublas)
-target_link_libraries_if(${ENABLE_MPI} gemm PUBLIC MPI::MPI_CXX)
-target_link_libraries_if(${ENABLE_STARPU} gemm PUBLIC MORSE::STARPU)
 
-# add_executable(getm src/getm.cpp)
-# target_link_libraries(getm PRIVATE gemmlib)
-# target_link_libraries_if(${ENABLE_CUDA} getm PRIVATE CUDA::cublas)
-# target_link_libraries_if(${ENABLE_MPI} getm PUBLIC MPI::MPI_CXX)
-# target_link_libraries_if(${ENABLE_STARPU} getm PUBLIC MORSE::STARPU)
+add_executable(ppgemm src/ppgemm.cpp)
+target_link_libraries(ppgemm PRIVATE gemmlib)
+
+add_executable(getm src/getm.cpp)
+target_link_libraries(getm PRIVATE gemmlib)
 
 install(TARGETS gemm RUNTIME DESTINATION bin)

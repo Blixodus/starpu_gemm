@@ -2,6 +2,7 @@ gemm
 results
 figures
 build
+CMakeFiles
 .build
 .cache
 
