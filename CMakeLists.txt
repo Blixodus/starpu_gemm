@@ -154,7 +154,6 @@ set( gemmlib_srcs
   src/matrix/accumulate_func.cpp
   src/matrix/fill_func.cpp
   src/matrix/print_func.cpp
-  src/matrix/cublas_perf.cpp
   src/matrix/asserteq_func.cpp
 
   src/ppmatrix/ppmatrix.cu

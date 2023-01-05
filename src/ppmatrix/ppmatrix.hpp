@@ -85,20 +85,20 @@ struct PPMatrix {
         int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
 
         HANDLE_ERR(cudaMalloc(&dA, A.rows * A.cols * sizeof(DataType)));
-        cudaMalloc(&dB, B.rows * B.cols * sizeof(DataType));
-        cudaMalloc(&dC, C.rows * C.cols * sizeof(DataType));
+        HANDLE_ERR(cudaMalloc(&dB, B.rows * B.cols * sizeof(DataType)));
+        HANDLE_ERR(cudaMalloc(&dC, C.rows * C.cols * sizeof(DataType)));
 
-        cudaHostRegister(A.ptr, A.rows * A.cols * sizeof(DataType), cudaHostRegisterDefault);
-        cudaHostRegister(B.ptr, B.rows * B.cols * sizeof(DataType), cudaHostRegisterDefault);
+        HANDLE_ERR(cudaHostRegister(A.ptr, A.rows * A.cols * sizeof(DataType), cudaHostRegisterDefault));
+        HANDLE_ERR(cudaHostRegister(B.ptr, B.rows * B.cols * sizeof(DataType), cudaHostRegisterDefault));
 
         if (use_beta) {
-            cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault);
+            HANDLE_ERR(cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault));
         }
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        cudaMemcpy(dA, A.ptr, A.rows * A.cols * sizeof(DataType), cudaMemcpyHostToDevice);
-        cudaMemcpy(dB, B.ptr, B.rows * B.cols * sizeof(DataType), cudaMemcpyHostToDevice);
+        HANDLE_ERR(cudaMemcpy(dA, A.ptr, A.rows * A.cols * sizeof(DataType), cudaMemcpyHostToDevice));
+        HANDLE_ERR(cudaMemcpy(dB, B.ptr, B.rows * B.cols * sizeof(DataType), cudaMemcpyHostToDevice));
 
         if (use_beta) {
             cudaMemcpy(dC, C.ptr, C.rows * C.cols * sizeof(DataType), cudaMemcpyHostToDevice);
@@ -109,7 +109,7 @@ struct PPMatrix {
         auto h2dDone = std::chrono::high_resolution_clock::now();
 
         if constexpr (std::is_same_v<DataType, f32>) {
-            cublasSgemm(
+            HANDLE_ERR(cublasSgemm(
                 handle,
                 convertToCublas(transA), convertToCublas(transB),
                 m, n, k,
@@ -118,10 +118,10 @@ struct PPMatrix {
                 dB, B.rows,
                 &beta,
                 dC, C.rows
-            );
+            ));
         } else {
             static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
-            cublasDgemm(
+            HANDLE_ERR(cublasDgemm(
                 handle,
                 convertToCublas(transA), convertToCublas(transB),
                 m, n, k,
@@ -130,28 +130,28 @@ struct PPMatrix {
                 dB, checked_cast<int>(B.rows),
                 &beta,
                 dC, checked_cast<int>(C.rows)
-            );
+            ));
         }
 
         cudaDeviceSynchronize();
 
         auto computeDone = std::chrono::high_resolution_clock::now();
 
-        cudaMemcpy(C.ptr, dC, C.rows * C.cols * sizeof(DataType), cudaMemcpyDeviceToHost);
+        HANDLE_ERR(cudaMemcpy(C.ptr, dC, C.rows * C.cols * sizeof(DataType), cudaMemcpyDeviceToHost));
 
         cudaDeviceSynchronize();
 
         auto d2hDone = std::chrono::high_resolution_clock::now();
 
-        cudaFree(dA);
-        cudaFree(dB);
-        cudaFree(dC);
+        HANDLE_ERR(cudaFree(dA));
+        HANDLE_ERR(cudaFree(dB));
+        HANDLE_ERR(cudaFree(dC));
 
-        cudaHostUnregister(A.ptr);
-        cudaHostUnregister(B.ptr);
+        HANDLE_ERR(cudaHostUnregister(A.ptr));
+        HANDLE_ERR(cudaHostUnregister(B.ptr));
 
         if (use_beta) {
-            cudaHostUnregister(C.ptr);
+            HANDLE_ERR(cudaHostUnregister(C.ptr));
         }
 
         return PerfRecord{ h2dDone - start, computeDone - h2dDone, d2hDone - computeDone };

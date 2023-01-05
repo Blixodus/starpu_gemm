@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "matrix/matrix.hpp"
-#include "matrix/cublas_perf.hpp"
 #include "util/helper.hpp"
 #include "util/argparse.hpp"
 
@@ -93,12 +92,6 @@ int main(int argc, char** argv) {
 	u32 m, n, k, b;
 	bool quiet;
 	parseArgs(argc, argv, m, n, k, b, quiet);
-
-#ifdef USE_CUDA
-	if (hasArg(argc, argv, "--perf-test")) {
-		cublas_perf_test(checked_cast<int>(m), checked_cast<int>(n), checked_cast<int>(k), true);
-	}
-#endif
 
 	if (starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
 		throw std::exception();
