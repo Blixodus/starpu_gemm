@@ -74,7 +74,6 @@ starpu_codelet make_bzero_matrix_cl() {
 template <typename DataType>
 static auto bzero_matrix_cl = make_bzero_matrix_cl<DataType>();
 
-
 template <typename DataType>
 starpu_codelet make_accumulate_matrix_cl() {
 	static struct starpu_perfmodel model = {
@@ -332,6 +331,7 @@ struct Matrix {
                                               STARPU_RW, C_sub_handle,
 #endif
                                               STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
+                                              STARPU_EXECUTE_ON_DATA, A_sub_handle,
                                               NULL
                                               );
             if (err) { throw std::exception(); }
