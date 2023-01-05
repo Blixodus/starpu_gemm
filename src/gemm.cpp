@@ -13,7 +13,7 @@
 
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
-#define ENABLE_REDUX 1
+#define ENABLE_REDUX 0
 #else
 #warning "ENABLE_REDUX 0"
 #define ENABLE_REDUX 0
