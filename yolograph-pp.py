@@ -22,14 +22,10 @@ for file in sys.argv[1:]:
         data = list(reader)
 
     if len(data[0]) != 5:
-        print('The csv file must have 4 columns')
+        print('The csv file must have 5 columns')
         sys.exit()
 
-    if data[0][0] != 'm' or data[0][1] != 'n' or data[0][2] != 'k' or data[0][3] != 'b' or data[0][4] != 'perf':
-        print('The csv file must have the columns m, n, k and perf')
-        sys.exit()
-
-    x = x if x is not None else [math.log2(int(row[0])) for row in data[1:]]
+    x = x if x is not None and len(x) > len(data) - 1 else [int(row[0]) for row in data[1:]]
     y.append([float(row[4]) for row in data[1:]])
     labels.append(Path(file).stem)
 

@@ -205,10 +205,15 @@ install(TARGETS gemmlib
 add_executable(gemm src/gemm.cpp)
 target_link_libraries(gemm PRIVATE gemmlib)
 
-add_executable(ppgemm src/ppgemm.cpp)
-target_link_libraries(ppgemm PRIVATE gemmlib)
-
 add_executable(getm src/getm.cpp)
 target_link_libraries(getm PRIVATE gemmlib)
+
+if (ENABLE_CUDA)
+  add_executable(ppgemm src/ppgemm.cpp)
+  target_link_libraries(ppgemm PRIVATE gemmlib)
+
+  add_executable(cublas src/cublas.cpp)
+  target_link_libraries(cublas PRIVATE gemmlib)
+endif()
 
 install(TARGETS gemm RUNTIME DESTINATION bin)

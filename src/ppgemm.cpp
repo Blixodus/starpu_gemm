@@ -69,7 +69,7 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 1.0f, C);
+    auto perf = PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     cudaDeviceSynchronize();
     std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
@@ -77,7 +77,7 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
 
     if (quiet) {
-        fmt::print("{},{},{},{},{:.3f}\n", m, n, k, 0, flops * 1000);
+        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops);
     } else {
         fmt::print("[mono] -- Time : {}s\n", time.count());
         fmt::print("[mono] -- Performance : {:.3f}Tflop/s\n", flops);

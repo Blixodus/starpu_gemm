@@ -4,13 +4,17 @@
 #include <array>
 #include <type_traits>
 #include <iostream>
+#include <chrono>
+#include "fmt/core.h"
 #include "starpu.h"
 
 #include "make_array.hpp"
 #include "dim_iter.hpp"
 
+#ifdef USE_CUDA
 #include "cuda_fp16.h"
 #include "cuda_bf16.h"
+#endif
 
 // newtypes
 
@@ -27,8 +31,10 @@ using i64 = int64_t;
 using f32 = float;
 using f64 = double;
 
+#ifdef USE_CUDA
 using f16 = __half;
 using bf16 = __nv_bfloat16;
+#endif
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
 #define STARPU_MATRIX_ROWS(x) STARPU_MATRIX_GET_NX((x))
@@ -145,3 +151,56 @@ class VecPrinter {
 	private:
 		const std::vector<P>& vec;
 };
+
+class PerfRecord {
+	using duration = std::chrono::duration<double>;
+
+	public:
+		duration h2d, compute, d2h;
+
+		PerfRecord(): h2d(0), compute(0), d2h(0) { }
+
+		PerfRecord(duration h2d, duration compute, duration d2h):
+			h2d(h2d), compute(compute), d2h(d2h)
+		{ }
+};
+
+template<typename T, typename U>
+inline constexpr bool is_transmutable_into_v = (std::alignment_of_v<T> == std::alignment_of_v<U>) && (sizeof(T) == sizeof(U)); 
+
+template<typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+static bool is_literal_zero(T val) {
+    typedef std::conditional_t<
+        is_transmutable_into_v<T, int>, int,
+        std::conditional_t<
+            is_transmutable_into_v<T, long>, long,
+            std::nullptr_t
+        >
+    > Repr;
+
+    union U { T b; Repr r; };
+
+    auto instance = U{};
+    instance.b = val;
+    return instance.r == 0;
+}
+
+#ifdef USE_CUDA
+
+#define HANDLE_ERR(val) handle_err((val), __LINE__)
+
+inline void handle_err(cudaError_t val, int line) {
+    if (__builtin_expect(val != cudaSuccess, 0)) {
+        fmt::print("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError()));
+        throw std::exception();
+    }
+}
+
+inline void handle_err(cublasStatus_t status, int line) {
+	if (__builtin_expect(status != CUBLAS_STATUS_SUCCESS, 0)) {
+		fmt::print("CUBLAS error at line {}: {}\n", line, status);
+		throw std::exception();
+	}
+}
+
+#endif

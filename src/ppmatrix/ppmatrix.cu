@@ -5,9 +5,10 @@
 #include "../util/helper.hpp"
 
 #include "fmt/core.h"
+#include <chrono>
 
 
-__host__ void ppgemm_f32(
+PerfRecord ppgemm_f32(
     cublasHandle_t handle,
     char transA,
     char transB,
@@ -20,15 +21,8 @@ __host__ void ppgemm_f32(
     fmt::print("/!\\ not implemented\n");
     throw std::exception();
 }
- 
-static void handle_err(cudaError_t val, int line) {
-    if (__builtin_expect(val != cudaSuccess, 0)) {
-        fmt::print("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError()));
-        throw std::exception();
-    }
-}
 
-__host__ void ppgemm_f64(
+PerfRecord ppgemm_f64(
     cublasHandle_t handle,
     char transA,
     char transB,
@@ -46,6 +40,8 @@ __host__ void ppgemm_f64(
     int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
     int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
 
+    PerfRecord perf;
+
     // ####################
     // STEP 0: preparation
     // ####################
@@ -53,31 +49,31 @@ __host__ void ppgemm_f64(
     // alloc CPU buffers
     float *A_h, *A_l, *B_h, *B_l, *C_h, *C_l;
     
-    handle_err(cudaMallocHost(&A_h, A.rows * A.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMallocHost(&A_l, A.rows * A.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMallocHost(&A_h, A.rows * A.cols * sizeof(float)));
+    HANDLE_ERR(cudaMallocHost(&A_l, A.rows * A.cols * sizeof(float)));
 
-    handle_err(cudaMallocHost(&B_h, B.rows * B.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMallocHost(&B_l, B.rows * B.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMallocHost(&B_h, B.rows * B.cols * sizeof(float)));
+    HANDLE_ERR(cudaMallocHost(&B_l, B.rows * B.cols * sizeof(float)));
 
-    handle_err(cudaMallocHost(&C_h, C.rows * C.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMallocHost(&C_l, C.rows * C.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMallocHost(&C_h, C.rows * C.cols * sizeof(float)));
+    HANDLE_ERR(cudaMallocHost(&C_l, C.rows * C.cols * sizeof(float)));
 
     // alloc GPU buffers
     float *dA_h, *dA_l, *dB_h, *dB_l, *dC_h, *dC_l;
     double *dA_dgemm, *dB_dgemm, *dRes_dgemm;
 
-    handle_err(cudaMalloc(&dA_h, A.rows * A.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMalloc(&dA_l, A.rows * A.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMalloc(&dA_h, A.rows * A.cols * sizeof(float)));
+    HANDLE_ERR(cudaMalloc(&dA_l, A.rows * A.cols * sizeof(float)));
 
-    handle_err(cudaMalloc(&dB_h, B.rows * B.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMalloc(&dB_l, B.rows * B.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMalloc(&dB_h, B.rows * B.cols * sizeof(float)));
+    HANDLE_ERR(cudaMalloc(&dB_l, B.rows * B.cols * sizeof(float)));
 
-    handle_err(cudaMalloc(&dC_h, C.rows * C.cols * sizeof(float)), __LINE__);
-    handle_err(cudaMalloc(&dC_l, C.rows * C.cols * sizeof(float)), __LINE__);
+    HANDLE_ERR(cudaMalloc(&dC_h, C.rows * C.cols * sizeof(float)));
+    HANDLE_ERR(cudaMalloc(&dC_l, C.rows * C.cols * sizeof(float)));
 
-    handle_err(cudaMalloc(&dA_dgemm, A.rows * A.cols * sizeof(double)), __LINE__);
-    handle_err(cudaMalloc(&dB_dgemm, B.rows * B.cols * sizeof(double)), __LINE__);
-    handle_err(cudaMalloc(&dRes_dgemm, C.rows * C.cols * sizeof(double)), __LINE__);
+    HANDLE_ERR(cudaMalloc(&dA_dgemm, A.rows * A.cols * sizeof(double)));
+    HANDLE_ERR(cudaMalloc(&dB_dgemm, B.rows * B.cols * sizeof(double)));
+    HANDLE_ERR(cudaMalloc(&dRes_dgemm, C.rows * C.cols * sizeof(double)));
 
     // use the default stream so that no sync are needed before / after a call to this function
     cudaStream_t s0 = 0;
@@ -86,6 +82,7 @@ __host__ void ppgemm_f64(
     // streams are created as cudaStreamNonBlocking, meaning they do not
     // implicitly sync with the default stream
     cudaStream_t s1, s2, s3;
+    cudaStreamCreateWithFlags(&s0, cudaStreamNonBlocking);
     cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking);
     cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking);
     cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking);
@@ -101,15 +98,14 @@ __host__ void ppgemm_f64(
 
     // No need to use events here, communications from/to the device are serialized
 
-    // decompose A on the host
+    // decompose A and B on the host (don't start copying yet to get accurate perf numbers)
     de_f64f32(A.ptr, A_h, A_l, A.rows, A.cols, A.ld);
-
+    de_f64f32(B.ptr, B_h, B_l, B.rows, B.cols, B.ld);
     
+    auto start = std::chrono::high_resolution_clock::now();
+
     // copy A_h to GPU
     cudaMemcpyAsync(dA_h, A_h, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s0);
-
-    // decompose B on the host (we're already copying A_h to GPU, so we can do this in parallel)
-    de_f64f32(B.ptr, B_h, B_l, B.rows, B.cols, B.ld);
 
     // copy B_h to GPU
     cudaMemcpyAsync(dB_h, B_h, B.rows * B.cols * sizeof(float), cudaMemcpyHostToDevice, s2);
@@ -146,6 +142,8 @@ __host__ void ppgemm_f64(
     // perform the dgemm (dRes_dgemm = dA_dgemm * dB_dgemm) on S0
     cublasSetStream(handle, s0);
 
+    double beta_main = 0.0;
+
     cublasDgemm(
         handle,
         convertToCublas(transA), convertToCublas(transB),
@@ -153,7 +151,7 @@ __host__ void ppgemm_f64(
         &alpha,
         dA_dgemm, A.rows,
         dB_dgemm, B.rows,
-        &beta,
+        &beta_main,
         dRes_dgemm, C.rows
     );
     
@@ -230,6 +228,8 @@ __host__ void ppgemm_f64(
     cudaStreamSynchronize(s3);
     cudaStreamSynchronize(s2);
 
+    perf.compute = std::chrono::high_resolution_clock::now() - start;
+
     // ###################################################
     // STEP 9: cleanup
     // ###################################################
@@ -262,4 +262,6 @@ __host__ void ppgemm_f64(
     cudaFreeHost(B_h);
     cudaFreeHost(C_h);
     cudaFreeHost(C_l);
+
+    return perf;
 }
