@@ -74,6 +74,7 @@ starpu_codelet make_bzero_matrix_cl() {
 template <typename DataType>
 static auto bzero_matrix_cl = make_bzero_matrix_cl<DataType>();
 
+
 template <typename DataType>
 starpu_codelet make_accumulate_matrix_cl() {
 	static struct starpu_perfmodel model = {
