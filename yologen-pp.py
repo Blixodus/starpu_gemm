@@ -11,7 +11,6 @@ if len(sys.argv) < 3:
 
 file = sys.argv[1]
 prog = sys.argv[2]
-sync_bs = sys.argv[3] == '--sync-bs'
 
 if '--' in sys.argv:
     args = sys.argv[sys.argv.index('--') + 1:]
@@ -24,7 +23,7 @@ with open('./plot/req/' + file + ".csv", 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['msize', 'h2d', 'compute', 'd2h', 'perf'])
 
-    for i in range(1, 14):
+    for i in range(1, 13):
         h2d = 0
         d2h = 0
         compute = 0
@@ -32,15 +31,7 @@ with open('./plot/req/' + file + ".csv", 'w') as f:
 
         for j in range(3):
             print(f"Running {prog} with m={i}, n={i}, k={i} ({j+1}/3)")
-            # add the remaning args at the end
-            run = [prog, '-m', str(i), '-n', str(i), '-k', str(i), '-q'] + args
-            if sync_bs:
-                run.append('-b')
-                run.append(str(i))
-
-            print(run)
-            
-            output = subprocess.check_output(run)
+            output = subprocess.check_output([prog, '-m', str(i), '-n', str(i), '-k', str(i), '-q'] + args)
             decoded = output.decode('utf-8').strip().split(',')
 
             h2d += float(decoded[1])

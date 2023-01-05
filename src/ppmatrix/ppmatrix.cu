@@ -6,7 +6,41 @@
 
 #include "fmt/core.h"
 #include <chrono>
+#include <random>
 
+
+template <typename DataType>
+void PPMatrix<DataType>::rndFill() {
+    std::random_device rd;
+    std::mt19937 e2(rd());
+    std::uniform_real_distribution<DataType> dist(0, 1000);
+
+    for (u32 i = 0; i < cols; ++i) {
+        for (u32 j = 0; j < rows; ++j) {
+            ptr[i * ld + j] = dist(e2);
+        }
+    }
+}
+
+template <typename DataType>
+void PPMatrix<DataType>::fill(DataType e) {
+    for (u32 i = 0; i < cols; ++i) {
+        for (u32 j = 0; j < rows; ++j) {
+            ptr[i * ld + j] = e;
+        }
+    }
+}
+
+template <typename DataType>
+void PPMatrix<DataType>::assertEq(DataType e) {
+    for (u32 i = 0; i < cols; ++i) {
+        for (u32 j = 0; j < rows; ++j) {
+            if (std::abs(ptr[i * ld + j] - e) > 1e-6) {
+                fmt::print("Assertion failed at ({}, {}): {} != {}\n", i, j, ptr[i * ld + j], e);
+            }
+        }
+    }
+}
 
 PerfRecord ppgemm_f32(
     cublasHandle_t handle,
@@ -193,8 +227,8 @@ PerfRecord ppgemm_f64(
         convertToCublas(transA), convertToCublas(transB),
         m, n, k,
         &sgemm_alpha,
-        dA_h, A.rows,
-        dB_l, B.rows,
+        dA_l, A.rows,
+        dB_h, B.rows,
         &sgemm_beta,
         dC_l, C.rows
     );
@@ -207,8 +241,8 @@ PerfRecord ppgemm_f64(
         convertToCublas(transA), convertToCublas(transB),
         m, n, k,
         &sgemm_alpha,
-        dA_l, A.rows,
-        dB_h, B.rows,
+        dA_h, A.rows,
+        dB_l, B.rows,
         &sgemm_beta,
         dC_l, C.rows
     );
@@ -265,3 +299,212 @@ PerfRecord ppgemm_f64(
 
     return perf;
 }
+
+template <typename DataType>
+PerfRecord PPMatrix<DataType>::gemm(
+    cublasHandle_t handle,
+        char transA,
+        char transB,
+        DataType alpha,
+        PPMatrix<DataType>& A,
+        PPMatrix<DataType>& B,
+        DataType beta,
+        PPMatrix<DataType>& C
+) {
+    assert(A.rows == C.rows);
+    assert(B.cols == C.cols);
+    assert(A.cols == B.rows);
+
+    DataType *dA, *dB, *dC;
+
+    bool use_beta = !is_literal_zero(beta);
+
+    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+
+    HANDLE_ERR(cudaMalloc(&dA, A.rows * A.cols * sizeof(DataType)));
+    HANDLE_ERR(cudaMalloc(&dB, B.rows * B.cols * sizeof(DataType)));
+    HANDLE_ERR(cudaMalloc(&dC, C.rows * C.cols * sizeof(DataType)));
+
+    HANDLE_ERR(cudaHostRegister(A.ptr, A.rows * A.cols * sizeof(DataType), cudaHostRegisterDefault));
+    HANDLE_ERR(cudaHostRegister(B.ptr, B.rows * B.cols * sizeof(DataType), cudaHostRegisterDefault));
+
+    if (use_beta) {
+        HANDLE_ERR(cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault));
+    }
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    HANDLE_ERR(cudaMemcpy(dA, A.ptr, A.rows * A.cols * sizeof(DataType), cudaMemcpyHostToDevice));
+    HANDLE_ERR(cudaMemcpy(dB, B.ptr, B.rows * B.cols * sizeof(DataType), cudaMemcpyHostToDevice));
+
+    if (use_beta) {
+        cudaMemcpy(dC, C.ptr, C.rows * C.cols * sizeof(DataType), cudaMemcpyHostToDevice);
+    }
+
+    cudaDeviceSynchronize();
+
+    auto h2dDone = std::chrono::high_resolution_clock::now();
+
+    if constexpr (std::is_same_v<DataType, f32>) {
+        HANDLE_ERR(cublasSgemm(
+            handle,
+            convertToCublas(transA), convertToCublas(transB),
+            m, n, k,
+            &alpha,
+            dA, checked_cast<int>(A.rows),
+            dB, checked_cast<int>(B.rows),
+            &beta,
+            dC, checked_cast<int>(C.rows)
+        ));
+    } else {
+        static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
+        HANDLE_ERR(cublasDgemm(
+            handle,
+            convertToCublas(transA), convertToCublas(transB),
+            m, n, k,
+            &alpha,
+            dA, checked_cast<int>(A.rows),
+            dB, checked_cast<int>(B.rows),
+            &beta,
+            dC, checked_cast<int>(C.rows)
+        ));
+    }
+
+    cudaDeviceSynchronize();
+
+    auto computeDone = std::chrono::high_resolution_clock::now();
+
+    HANDLE_ERR(cudaMemcpy(C.ptr, dC, C.rows * C.cols * sizeof(DataType), cudaMemcpyDeviceToHost));
+
+    cudaDeviceSynchronize();
+
+    auto d2hDone = std::chrono::high_resolution_clock::now();
+
+    HANDLE_ERR(cudaFree(dA));
+    HANDLE_ERR(cudaFree(dB));
+    HANDLE_ERR(cudaFree(dC));
+
+    HANDLE_ERR(cudaHostUnregister(A.ptr));
+    HANDLE_ERR(cudaHostUnregister(B.ptr));
+
+    if (use_beta) {
+        HANDLE_ERR(cudaHostUnregister(C.ptr));
+    }
+
+    return PerfRecord{ h2dDone - start, computeDone - h2dDone, d2hDone - computeDone };
+}
+
+/*
+    OpenBLAS interface
+*/
+
+extern "C" void sgemm_(
+	char* transA,
+	char* transB,
+	int* m,
+	int* n,
+	int* k,
+	float* alpha,
+	float* A,
+	int* lda,
+	float* B,
+	int* ldb,
+	float* beta,
+	float* C,
+	int* ldc
+);
+
+extern "C" void dgemm_(
+	char* transA,
+	char* transB,
+	int* m,
+	int* n,
+	int* k,
+	double* alpha,
+	double* A,
+	int* lda,
+	double* B,
+	int* ldb,
+	double* beta,
+	double* C,
+	int* ldc
+);
+
+extern "C" float slange_(
+    char* norm,
+    int* m,
+    int* n,
+    float* A,
+    int* lda,
+    float* work
+);
+
+extern "C" double dlange_(
+    char* norm,
+    int* m,
+    int* n,
+    double* A,
+    int* lda,
+    double* work
+);
+
+template <typename DataType>
+void PPMatrix<DataType>::blasGemm(
+    char transA,
+    char transB,
+    DataType alpha,
+    PPMatrix<DataType>& A,
+    PPMatrix<DataType>& B,
+    DataType beta,
+    PPMatrix<DataType>& C
+) {
+    assert(A.rows == C.rows);
+    assert(B.cols == C.cols);
+    assert(A.cols == B.rows);
+
+    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+
+    if constexpr (std::is_same_v<DataType, f32>) {
+        sgemm_(&transA, &transB, &m, &n, &k, &alpha, A.ptr, &m, B.ptr, &k, &beta, C.ptr, &m);
+    } else {
+        static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
+        dgemm_(&transA, &transB, &m, &n, &k, &alpha, A.ptr, &m, B.ptr, &k, &beta, C.ptr, &m);
+    }
+}
+
+template <typename DataType>
+void PPMatrix<DataType>::sub(
+    PPMatrix<DataType>& A,
+    PPMatrix<DataType>& B,
+    PPMatrix<DataType>& C
+) {
+    assert((A.rows == B.rows) && (A.rows == B.rows));
+    assert((A.cols == B.cols) && (A.cols == B.cols));
+
+    for (u32 i = 0; i < A.rows; ++i) {
+        for (u32 j = 0; j < A.cols; ++j) {
+            C.ptr[i * C.ld + j] = A.ptr[i * A.ld + j] - B.ptr[i * B.ld + j];
+        }
+    }
+}
+
+template <typename DataType>
+DataType PPMatrix<DataType>::norm(char norm, PPMatrix<DataType>& A) {
+    int M   = checked_cast<int>(A.rows);
+    int N   = checked_cast<int>(A.cols);
+    int LD  = checked_cast<int>(A.ld);
+
+    if constexpr (std::is_same_v<DataType, f32>) {
+        return slange_(&norm, &M, &N, A.ptr, &LD, nullptr);
+    } else {
+        static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
+        return dlange_(&norm, &M, &N, A.ptr, &LD, nullptr);
+    }
+}
+
+template class PPMatrix<f32>;
+template class PPMatrix<f64>;

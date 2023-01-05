@@ -65,7 +65,7 @@ void test_gemm(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
 
     if (quiet) {
-        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops);
+        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops * 1000);
     } else {
         fmt::print("[mono] -- Time : {}s\n", time.count());
         fmt::print("[mono] -- Performance : {:.3f}Tflop/s\n", flops);

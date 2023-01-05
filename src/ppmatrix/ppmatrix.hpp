@@ -48,23 +48,9 @@ struct PPMatrix {
         delete[] ptr;
     }
 
-    void fill(DataType e) {
-        for (u32 i = 0; i < cols; ++i) {
-            for (u32 j = 0; j < rows; ++j) {
-                ptr[i * ld + j] = e;
-            }
-        }
-    }
-
-    void assertEq(DataType e) {
-        for (u32 i = 0; i < cols; ++i) {
-            for (u32 j = 0; j < rows; ++j) {
-                if (std::abs(ptr[i * ld + j] - e) > 1e-6) {
-                    fmt::print("Assertion failed at ({}, {}): {} != {}\n", i, j, ptr[i * ld + j], e);
-                }
-            }
-        }
-    }
+    void fill(DataType e);
+    void rndFill();
+    void assertEq(DataType e);
 
     static PerfRecord gemm(
         cublasHandle_t handle,
@@ -75,87 +61,17 @@ struct PPMatrix {
         PPMatrix<DataType>& B,
         DataType beta,
         PPMatrix<DataType>& C
-    ) {
-        DataType *dA, *dB, *dC;
+    );
 
-        bool use_beta = !is_literal_zero(beta);
-
-        int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
-        int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
-        int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
-
-        HANDLE_ERR(cudaMalloc(&dA, A.rows * A.cols * sizeof(DataType)));
-        HANDLE_ERR(cudaMalloc(&dB, B.rows * B.cols * sizeof(DataType)));
-        HANDLE_ERR(cudaMalloc(&dC, C.rows * C.cols * sizeof(DataType)));
-
-        HANDLE_ERR(cudaHostRegister(A.ptr, A.rows * A.cols * sizeof(DataType), cudaHostRegisterDefault));
-        HANDLE_ERR(cudaHostRegister(B.ptr, B.rows * B.cols * sizeof(DataType), cudaHostRegisterDefault));
-
-        if (use_beta) {
-            HANDLE_ERR(cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault));
-        }
-
-        auto start = std::chrono::high_resolution_clock::now();
-
-        HANDLE_ERR(cudaMemcpy(dA, A.ptr, A.rows * A.cols * sizeof(DataType), cudaMemcpyHostToDevice));
-        HANDLE_ERR(cudaMemcpy(dB, B.ptr, B.rows * B.cols * sizeof(DataType), cudaMemcpyHostToDevice));
-
-        if (use_beta) {
-            cudaMemcpy(dC, C.ptr, C.rows * C.cols * sizeof(DataType), cudaMemcpyHostToDevice);
-        }
-
-        cudaDeviceSynchronize();
-
-        auto h2dDone = std::chrono::high_resolution_clock::now();
-
-        if constexpr (std::is_same_v<DataType, f32>) {
-            HANDLE_ERR(cublasSgemm(
-                handle,
-                convertToCublas(transA), convertToCublas(transB),
-                m, n, k,
-                &alpha,
-                dA, A.rows,
-                dB, B.rows,
-                &beta,
-                dC, C.rows
-            ));
-        } else {
-            static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
-            HANDLE_ERR(cublasDgemm(
-                handle,
-                convertToCublas(transA), convertToCublas(transB),
-                m, n, k,
-                &alpha,
-                dA, checked_cast<int>(A.rows),
-                dB, checked_cast<int>(B.rows),
-                &beta,
-                dC, checked_cast<int>(C.rows)
-            ));
-        }
-
-        cudaDeviceSynchronize();
-
-        auto computeDone = std::chrono::high_resolution_clock::now();
-
-        HANDLE_ERR(cudaMemcpy(C.ptr, dC, C.rows * C.cols * sizeof(DataType), cudaMemcpyDeviceToHost));
-
-        cudaDeviceSynchronize();
-
-        auto d2hDone = std::chrono::high_resolution_clock::now();
-
-        HANDLE_ERR(cudaFree(dA));
-        HANDLE_ERR(cudaFree(dB));
-        HANDLE_ERR(cudaFree(dC));
-
-        HANDLE_ERR(cudaHostUnregister(A.ptr));
-        HANDLE_ERR(cudaHostUnregister(B.ptr));
-
-        if (use_beta) {
-            HANDLE_ERR(cudaHostUnregister(C.ptr));
-        }
-
-        return PerfRecord{ h2dDone - start, computeDone - h2dDone, d2hDone - computeDone };
-    }
+    static void blasGemm(
+        char transA,
+        char transB,
+        DataType alpha,
+        PPMatrix<DataType>& A,
+        PPMatrix<DataType>& B,
+        DataType beta,
+        PPMatrix<DataType>& C
+    );
 
     static PerfRecord ppgemm(
         cublasHandle_t handle,
@@ -174,4 +90,12 @@ struct PPMatrix {
             return ppgemm_f64(handle, transA, transB, alpha, A, B, beta, C);
         }
     }
+
+    static void sub(
+        PPMatrix<DataType>& A,
+        PPMatrix<DataType>& B,
+        PPMatrix<DataType>& C
+    );
+
+    static DataType norm(char norm, PPMatrix<DataType>& A);
 };

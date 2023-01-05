@@ -25,12 +25,13 @@
 
 void printHelp() {
 	std::cout << "Parameters for ppgemm:\n"
-			  << "  -m     --  Set the size of M (as log)\n"
-			  << "  -n     --  Set the size of N (as log)\n"
-			  << "  -k     --  Set the size of K (as log)\n"
-			  << "  -b     --  Set the block size (as log)\n"
-			  << "  -t     --  Enable tiled mode"
-			  << "  -q     --  Quiet mode" << std::endl;
+			  << "  -m               --  Set the size of M (as log)\n"
+			  << "  -n               --  Set the size of N (as log)\n"
+			  << "  -k               --  Set the size of K (as log)\n"
+			  << "  -b               --  Set the block size (as log)\n"
+			  << "  -t               --  Enable tiled mode"
+			  << "  -q               --  Quiet mode"
+			  << "  --run-checks     --  run advanced checks" << std::endl;
 }
 
 void parseArgs(
@@ -41,7 +42,8 @@ void parseArgs(
 	u32& k,
 	u32& b,
     bool& tiled,
-    bool& quiet
+    bool& quiet,
+    bool& run_checks
 ) {
 	if (hasArg(argc, argv, "-h")) {
 		printHelp();
@@ -54,6 +56,31 @@ void parseArgs(
 	b = 1 << (hasArg(argc, argv, "-b") ? stoui(getArg(argc, argv, "-b")) : 10);
     tiled = hasArg(argc, argv, "-t") ? true : false;
     quiet = hasArg(argc, argv, "-q") ? true : false;
+    run_checks = hasArg(argc, argv, "--run-checks") ? true : false;
+}
+
+void test_ppgem_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
+    fmt::print("[mono] M={} N={} K={}\n", m, n, k);
+
+    PPMatrix<f64> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n);
+
+    fmt::print("random fill...\n");
+    A.rndFill();
+    B.rndFill();
+
+    fmt::print("ppgemm...\n");
+    PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
+
+    fmt::print("computing blas truth source...\n");
+    PPMatrix<f64>::blasGemm('N', 'N', 1.0f, A, B, 0.0f, T);
+
+    fmt::print("checking...\n");
+    PPMatrix<f64>::sub(T, C, D);
+    
+    auto diffNorm = PPMatrix<f64>::norm('F', D);
+    auto truthNorm = PPMatrix<f64>::norm('F', T);
+
+    fmt::print("relative error = {}\n", diffNorm / truthNorm);
 }
 
 void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
@@ -65,19 +92,16 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
 
     A.fill(1);
     B.fill(3);
-    C.fill(0);
-
-    auto start = std::chrono::high_resolution_clock::now();
 
     auto perf = PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     cudaDeviceSynchronize();
-    std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
+    std::chrono::duration<double> time = perf.d2h + perf.compute + perf.h2d;
 
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
 
     if (quiet) {
-        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops);
+        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops * 1000);
     } else {
         fmt::print("[mono] -- Time : {}s\n", time.count());
         fmt::print("[mono] -- Performance : {:.3f}Tflop/s\n", flops);
@@ -119,8 +143,13 @@ void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 
 int main(int argc, char** argv) {
     u32 m, n, k, b;
-    bool tiled, quiet;
-    parseArgs(argc, argv, m, n, k, b, tiled, quiet);
+    bool tiled, quiet, run_checks;
+    parseArgs(argc, argv, m, n, k, b, tiled, quiet, run_checks);
+
+    if (run_checks&& (quiet || tiled)) {
+        fmt::print("Cannot run checks in quiet or tiled mode\n");
+        return 1;
+    }
 
     if (tiled) {
         // init starpu
@@ -146,7 +175,11 @@ int main(int argc, char** argv) {
             fmt::print("cublasCreate failed: {}\n", cudaGetErrorString(cudaGetLastError()));
             return 1;
         }
-            
-        test_ppgemm_mono(handle, m, n, k, quiet);
+
+        if (run_checks) {
+            test_ppgem_extchk(handle, m, n, k, quiet);
+        } else {
+            test_ppgemm_mono(handle, m, n, k, quiet);
+        }
     }
 }
