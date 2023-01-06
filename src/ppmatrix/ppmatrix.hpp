@@ -98,4 +98,5 @@ struct PPMatrix {
     );
 
     static DataType norm(char norm, PPMatrix<DataType>& A);
+    static DataType norm2(PPMatrix<DataType>& A);
 };

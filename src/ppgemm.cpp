@@ -62,17 +62,25 @@ void parseArgs(
 void test_ppgem_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     fmt::print("[mono] M={} N={} K={}\n", m, n, k);
 
-    PPMatrix<f64> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n);
+    PPMatrix<f64> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n), OB(m, n);
 
     fmt::print("random fill...\n");
     A.rndFill();
     B.rndFill();
+    C.fill(0);
+    T.fill(0);
+    D.fill(0);
 
     fmt::print("ppgemm...\n");
     PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     fmt::print("computing blas truth source...\n");
-    PPMatrix<f64>::blasGemm('N', 'N', 1.0f, A, B, 0.0f, T);
+    cublasSetStream(handle, 0);
+    PPMatrix<f64>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, T);
+
+
+    PPMatrix<f64>::blasGemm('N', 'N', 1.0f, A, B, 0.0f, OB);
+
 
     fmt::print("checking...\n");
     PPMatrix<f64>::sub(T, C, D);
@@ -80,7 +88,8 @@ void test_ppgem_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     auto diffNorm = PPMatrix<f64>::norm('F', D);
     auto truthNorm = PPMatrix<f64>::norm('F', T);
 
-    fmt::print("relative error = {}\n", diffNorm / truthNorm);
+
+    fmt::print(" error = {}\n", diffNorm / truthNorm);
 }
 
 void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {

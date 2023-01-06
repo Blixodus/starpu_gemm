@@ -6,9 +6,9 @@ static void de_f32f16_flat(float* __restrict in, f16* __restrict a, f16* __restr
     for (size_t i = 0; i < size; i++) {
         float src = in[i];
         f16 ai = __float2half(src);
-        float delta = __half2float(ai) - src;
+        float delta = src - __half2float(ai);
         f16 bi = __float2half(delta);
-        f16 ci = __float2half(__half2float(bi) - delta);
+        f16 ci = __float2half(delta - __half2float(bi));
 
         a[i] = ai;
         b[i] = bi;
@@ -23,9 +23,9 @@ static void de_f32F16(float* __restrict in, f16* __restrict a, f16* __restrict b
 
             float src = in[idx];
             f16 ai = __float2half(src);
-            float delta = __half2float(ai) - src;
+            float delta = src - __half2float(ai);
             f16 bi = __float2half(delta);
-            f16 ci = __float2half(__half2float(bi) - delta);
+            f16 ci = __float2half(delta - __half2float(bi));
 
             a[idx] = ai;
             b[idx] = bi;
@@ -48,7 +48,7 @@ static void de_f64f32_flat(const double* __restrict in, float* __restrict hi, fl
     for (size_t i = 0; i < size; i++) {
         double src = in[i];
         float ai = static_cast<float>(src);
-        float bi = static_cast<float>(static_cast<double>(ai) - src);
+        float bi = static_cast<float>(src - static_cast<double>(ai));
 
         hi[i] = ai;
         lo[i] = bi;
@@ -60,7 +60,7 @@ static void de_f64f32(const double* __restrict in, float* __restrict hi, float* 
         for (size_t j = 0; j < cols; j++) {
             double src = in[i * ld + j];
             float ai = static_cast<float>(src);
-            float bi = static_cast<float>(static_cast<double>(ai) - src);
+            float bi = static_cast<float>(src - static_cast<double>(ai));
 
             hi[i * ld + j] = ai;
             lo[i * ld + j] = bi;
