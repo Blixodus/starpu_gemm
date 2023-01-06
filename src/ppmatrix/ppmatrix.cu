@@ -335,12 +335,9 @@ PerfRecord ppgemm_f64(
 
     // perform the decomposition immediatly on s0 because
     // it is the stream which performed the dgemm
-    extractf32_high_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, C.rows * C.cols);
-
-    // wait for s0 to finish dgemm and perform the decomposition on s2
-    cudaStreamWaitEvent(s2, e0, 0);
-    extractf32_low_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s2>>>(dRes_dgemm, dC_l, C.rows * C.cols);
-    cudaEventRecord(e0, s2); // s2 finished the decomposition
+    extractf32_mixedhl_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, dC_l, C.rows * C.cols);
+    
+    cudaEventRecord(e0, s0); // s0 finished the decomposition
 
     // ###################################################
     // STEP 5: send back dC_h to the host
