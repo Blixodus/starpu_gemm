@@ -28,7 +28,7 @@ using f64 = double;
 #define STARPU_MATRIX_ROWS(x) STARPU_MATRIX_GET_NX((x))
 #define STARPU_MATRIX_COLS(x) STARPU_MATRIX_GET_NY((x))
 
-inline starpu_data_access_mode operator|(starpu_data_access_mode a, starpu_data_access_mode b) {
+constexpr inline starpu_data_access_mode operator|(starpu_data_access_mode a, starpu_data_access_mode b) {
 	using T = std::underlying_type_t<starpu_data_access_mode>;
 	return static_cast<starpu_data_access_mode>(static_cast<T>(a) | static_cast<T>(b));
 }

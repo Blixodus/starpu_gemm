@@ -23,7 +23,7 @@ static int can_execute(unsigned workerid, struct starpu_task* task, unsigned nim
 	return enable_gpu;
 }
 
-template <typename DataType>
+template <typename DataType, starpu_data_access_mode C_mode>
 starpu_codelet make_gemm_cl() {
 	static struct starpu_perfmodel model = {
 		.type = STARPU_REGRESSION_BASED,
@@ -38,18 +38,14 @@ starpu_codelet make_gemm_cl() {
 		.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
 		.nbuffers = 3,
-#if ENABLE_REDUX != 0
-		.modes = {STARPU_R, STARPU_R, STARPU_RW | STARPU_COMMUTE},
-#else
-		.modes = {STARPU_R, STARPU_R, STARPU_RW},
-#endif
+		.modes = {STARPU_R, STARPU_R, C_mode},
 		.model = &model,
     .name = "gemm",
 	};
 }
 
-template <typename DataType>
-static auto gemm_cl = make_gemm_cl<DataType>();
+template <typename DataType, starpu_data_access_mode C_mode>
+static auto gemm_cl = make_gemm_cl<DataType, C_mode>();
 
 template <typename DataType>
 starpu_codelet make_bzero_matrix_cl() {
@@ -301,13 +297,13 @@ struct Matrix {
 		assert(A.cols == B.rows);
 		assert(A.block_size == B.block_size && B.block_size == C.block_size);
 
-	#if ENABLE_REDUX != 0
+#if ENABLE_REDUX != 0
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
 				starpu_data_set_reduction_methods(C.data_handle.get(i, j), &accumulate_matrix_cl<DataType>, &bzero_matrix_cl<DataType>);
 			}
 		}
-	#endif
+#endif
 
 		for (u32 i = 0; i < C.data_handle.row_blocks; i++) {
 			for (u32 j = 0; j < C.data_handle.col_blocks; j++) {
@@ -315,25 +311,23 @@ struct Matrix {
 				for (u32 k = 0; k < A.data_handle.col_blocks; k++) {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
-
+          auto C_mode = (ENABLE_REDUX != 0) ? STARPU_MPI_REDUX : ((beta == 0. && k == 0) ? STARPU_W : STARPU_RW);
+          auto func_ptr = (ENABLE_REDUX != 0) ? &gemm_cl<DataType, STARPU_RW|STARPU_COMMUTE> : ((beta == 0. && k == 0) ? &gemm_cl<DataType, STARPU_W> : &gemm_cl<DataType, STARPU_RW>);
+          auto beta_insert = (beta == 0. && k > 0) ? DataType(1) : beta;
+          // TODO : Transpositions
+          
           if(rank == A.data_handle.get_owner(i, k) || rank == B.data_handle.get_owner(k, j) || rank == C.data_handle.get_owner(i, j)) {
-            auto err = starpu_mpi_task_insert(
-                                              MPI_COMM_WORLD, &gemm_cl<DataType>,
+            auto err = starpu_mpi_task_insert(MPI_COMM_WORLD, func_ptr,
                                               STARPU_VALUE, &transA, sizeof(transA),
                                               STARPU_VALUE, &transB, sizeof(transB),
                                               STARPU_VALUE, &alpha, sizeof(alpha),
-                                              STARPU_VALUE, &beta, sizeof(beta),
+                                              STARPU_VALUE, &beta_insert, sizeof(beta_insert),
                                               STARPU_R, A_sub_handle,
                                               STARPU_R, B_sub_handle,
-#if ENABLE_REDUX != 0
-                                              STARPU_MPI_REDUX, C_sub_handle,
-#else
-                                              STARPU_RW, C_sub_handle,
-#endif
+                                              C_mode, C_sub_handle,
                                               STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
                                               STARPU_EXECUTE_ON_DATA, C_sub_handle,
-                                              NULL
-                                              );
+                                              NULL);
             if (err) { throw std::exception(); }
           }
 				}

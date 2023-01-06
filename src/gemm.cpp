@@ -13,7 +13,7 @@
 
 #define TWODIM 1
 #if defined(HAVE_STARPU_MPI_REDUX)
-#define ENABLE_REDUX 0
+#define ENABLE_REDUX 1
 #else
 #warning "ENABLE_REDUX 0"
 #define ENABLE_REDUX 0
@@ -28,13 +28,13 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, std::ofstream& resultFile) {
 
 	A.fill(1);
 	B.fill(1);
-	C.fill(0);
+	//C.fill(0);
 
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	Matrix<float>::gemm('N', 'N', 1.0f, A, B, 1.0f, C);
+	Matrix<float>::gemm('N', 'N', 1.0f, A, B, 0.0f, C);
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
 	std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
