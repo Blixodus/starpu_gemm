@@ -6,7 +6,7 @@ import subprocess
 import os
 
 if len(sys.argv) < 3:
-    print('Usage: yologen-pp.py <csv_file> <program> <--sync-bs> <program_args>')
+    print('Usage: yologen-pp.py <csv_file> <program> <program_args>')
     sys.exit()
 
 file = sys.argv[1]
@@ -23,7 +23,7 @@ with open('./plot/req/' + file + ".csv", 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['msize', 'h2d', 'compute', 'd2h', 'perf'])
 
-    for i in range(1, 13):
+    for i in range(7, 14):
         h2d = 0
         d2h = 0
         compute = 0

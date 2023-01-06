@@ -44,7 +44,8 @@ void parseArgs(
 	u32& b,
     bool& tiled,
     bool& quiet,
-    bool& run_checks
+    bool& run_checks,
+    char& type
 ) {
 	if (hasArg(argc, argv, "-h")) {
 		printHelp();
@@ -55,15 +56,17 @@ void parseArgs(
 	n = 1 << (hasArg(argc, argv, "-n") ? stoui(getArg(argc, argv, "-n")) : 10);
 	k = 1 << (hasArg(argc, argv, "-k") ? stoui(getArg(argc, argv, "-k")) : 10);
 	b = 1 << (hasArg(argc, argv, "-b") ? stoui(getArg(argc, argv, "-b")) : 10);
-    tiled = hasArg(argc, argv, "-t") ? true : false;
+    tiled = hasArg(argc, argv, "--tiled") ? true : false;
     quiet = hasArg(argc, argv, "-q") ? true : false;
     run_checks = hasArg(argc, argv, "--run-checks") ? true : false;
+	type = (hasArg(argc, argv, "-t") ? (char) tolower(getArg(argc, argv, "-t")[0]) : 's');
 }
 
-void test_ppgem_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
-    fmt::print("[mono] M={} N={} K={}\n", m, n, k);
+template<typename DataType>
+void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
+    fmt::print("[mono] M={} N={} K={}, DT={}\n", m, n, k, type_name<DataType>());
 
-    PPMatrix<f64> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n), OB(m, n);
+    PPMatrix<DataType> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n), OB(m, n);
 
     fmt::print("random fill...\n");
     A.rndFill();
@@ -73,37 +76,33 @@ void test_ppgem_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     D.fill(0);
 
     fmt::print("ppgemm...\n");
-    PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
+    PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     fmt::print("computing blas truth source...\n");
     cublasSetStream(handle, 0);
-    PPMatrix<f64>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, T);
-
-
-    PPMatrix<f64>::blasGemm('N', 'N', 1.0f, A, B, 0.0f, OB);
-
+    PPMatrix<DataType>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, T);
 
     fmt::print("checking...\n");
-    PPMatrix<f64>::sub(T, C, D);
+    PPMatrix<DataType>::sub(T, C, D);
     
-    auto diffNorm = PPMatrix<f64>::norm('F', D);
-    auto truthNorm = PPMatrix<f64>::norm('F', T);
+    auto diffNorm = PPMatrix<DataType>::norm('F', D);
+    auto truthNorm = PPMatrix<DataType>::norm('F', T);
 
-
-    fmt::print(" error = {}\n", diffNorm / truthNorm);
+    fmt::print("error = {}\n", diffNorm / truthNorm);
 }
 
+template<typename DataType>
 void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
 	if (!quiet) {
-        fmt::print("[mono] M={} N={} K={}\n", m, n, k);
+        fmt::print("[mono] M={} N={} K={}, DT={}\n", m, n, k, type_name<DataType>());
     }
 
-    PPMatrix<f64> A(m, k), B(k, n), C(m, n);
+    PPMatrix<DataType> A(m, k), B(k, n), C(m, n);
 
     A.fill(1);
     B.fill(3);
 
-    auto perf = PPMatrix<f64>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
+    auto perf = PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     cudaDeviceSynchronize();
     std::chrono::duration<double> time = perf.d2h + perf.compute + perf.h2d;
@@ -117,15 +116,17 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
         fmt::print("[mono] -- Performance : {:.3f}Tflop/s\n", flops);
     }
 
-    C.assertEq(static_cast<f64>(k * 3));
+    C.assertEq(static_cast<DataType>(k * 3));
 }
 
+template<typename DataType>
 void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 	if (!quiet) {
-        fmt::print("[tiled] Redux={} CPU={} GPU={} M={} N={} K={} BS={}\n", ENABLE_REDUX, enable_cpu, enable_gpu, m, n, k, block_size);
+        fmt::print("[tiled] Redux={} CPU={} GPU={} M={} N={} K={} BS={}, DT={}\n",
+            ENABLE_REDUX, enable_cpu, enable_gpu, m, n, k, block_size, type_name<DataType>());
     }
 
-    Matrix<f64> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
+    Matrix<DataType> A(m, k, block_size), B(k, n, block_size), C(m, n, block_size);
 
 	A.fill(1);
 	B.fill(1);
@@ -135,7 +136,7 @@ void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 
 	auto start = std::chrono::high_resolution_clock::now();
 
-	Matrix<f64>::gemm('N', 'N', 1.0f, A, B, 0.0f, C);
+	Matrix<DataType>::gemm('N', 'N', 1.0f, A, B, 0.0f, C);
 	starpu_mpi_wait_for_all(MPI_COMM_WORLD);
 
 	std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
@@ -148,15 +149,16 @@ void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
         fmt::print("[tiled] -- Performance : {:.3f}Tflop/s\n", flops);
     }
 
-	C.assertEq(static_cast<f64>(k));
+	C.assertEq(static_cast<DataType>(k));
 }
 
 int main(int argc, char** argv) {
     u32 m, n, k, b;
     bool tiled, quiet, run_checks;
-    parseArgs(argc, argv, m, n, k, b, tiled, quiet, run_checks);
+    char type = 's';
+    parseArgs(argc, argv, m, n, k, b, tiled, quiet, run_checks, type);
 
-    if (run_checks&& (quiet || tiled)) {
+    if (run_checks && (quiet || tiled)) {
         fmt::print("Cannot run checks in quiet or tiled mode\n");
         return 1;
     }
@@ -171,7 +173,19 @@ int main(int argc, char** argv) {
             starpu_cublas_init();
         #endif
 
-        test_ppgemm_tiled(m, n, k, b, quiet);
+        switch (type) {
+            case 's':
+                test_ppgemm_tiled<f32>(m, n, k, b, quiet);
+            break;
+
+            case 'd':
+                test_ppgemm_tiled<f64>(m, n, k, b, quiet);
+            break;
+
+            default:
+                fmt::print("Invalid type: {}\n", type);
+                return 1;
+        }
 
         #ifdef USE_CUDA
             starpu_cublas_shutdown();
@@ -187,9 +201,33 @@ int main(int argc, char** argv) {
         }
 
         if (run_checks) {
-            test_ppgem_extchk(handle, m, n, k, quiet);
+            switch (type) {
+                case 's':
+                    test_ppgemm_extchk<f32>(handle, m, n, k, quiet);
+                break;
+
+                case 'd':
+                    test_ppgemm_extchk<f64>(handle, m, n, k, quiet);
+                break;
+
+                default:
+                    fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
+                    return 1;
+            }
         } else {
-            test_ppgemm_mono(handle, m, n, k, quiet);
+            switch (type) {
+                case 's':
+                    test_ppgemm_mono<f32>(handle, m, n, k, quiet);
+                break;
+
+                case 'd':
+                    test_ppgemm_mono<f64>(handle, m, n, k, quiet);
+                break;
+
+                default:
+                    fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
+                    return 1;
+            }
         }
     }
 }

@@ -224,3 +224,14 @@ inline void handle_err(cublasStatus_t status, int line) {
 }
 
 #endif
+
+template <typename DataType>
+constexpr std::string_view type_name() {
+	if constexpr (std::is_same_v<DataType, float>) {
+		return "single";
+	} else if constexpr (std::is_same_v<DataType, double>) {
+		return "double";
+	} else {
+		return "unknown";
+	}
+}
