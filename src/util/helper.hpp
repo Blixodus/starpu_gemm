@@ -5,7 +5,10 @@
 #include <type_traits>
 #include <iostream>
 #include <chrono>
+
+#define FMT_HEADER_ONLY
 #include "fmt/core.h"
+
 #include "starpu.h"
 
 #include "make_array.hpp"
@@ -167,7 +170,12 @@ class PerfRecord {
 
 template<typename T, typename U>
 struct is_transmutable_into
-	: std::integral_constant<bool, (std::alignment_of_v<T> == std::alignment_of_v<U>) && (sizeof(T) == sizeof(U))>
+    : std::integral_constant<bool,
+        (std::alignment_of_v<T> == std::alignment_of_v<U>) &&
+        (sizeof(T) == sizeof(U)) &&
+        std::is_trivially_copyable_v<T> &&
+        std::is_trivially_copyable_v<U>
+    >
 { };
 
 template<typename T, typename U>

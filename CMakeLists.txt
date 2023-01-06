@@ -142,8 +142,6 @@ set( CBLAS_MT FALSE )
 find_package(CBLAS REQUIRED)
 
 # search for fmtlib
-# find_package(fmt CONFIG REQUIRED)
-add_subdirectory(src/fmt)
 include_directories(${PROJECT_SOURCE_DIR}/fmt/include)
 
 # Add libraries
@@ -194,10 +192,6 @@ target_link_libraries_if(${ENABLE_CUDA} gemmlib PUBLIC CUDA::cudart)
 target_link_libraries(gemmlib PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(gemmlib PUBLIC MORSE::CBLAS)
 target_link_libraries(gemmlib PUBLIC MORSE::M)
-target_link_directories(gemmlib PUBLIC src/fmt/src)
-target_link_libraries(gemmlib PUBLIC fmt)
-# target_link_libraries(gemmlib PUBLIC src/fmt/libfmt.so)
-# target_link_libraries(gemmlib PUBLIC fmt::fmt-header-only)  
 
 install(TARGETS gemmlib
   RUNTIME DESTINATION bin

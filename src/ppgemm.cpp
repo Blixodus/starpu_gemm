@@ -8,6 +8,7 @@
 #include <numeric>
 #include <vector>
 
+#define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include "cublas_v2.h"
 

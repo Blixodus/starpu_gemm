@@ -4,6 +4,7 @@
 #include "pputils.hpp"
 #include "../util/helper.hpp"
 
+#define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include <chrono>
 #include <random>
