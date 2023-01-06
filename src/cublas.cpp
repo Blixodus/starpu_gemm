@@ -8,7 +8,7 @@
 #include <numeric>
 #include <vector>
 
-#include <fmt/core.h>
+#include "fmt/core.h"
 #include "cublas_v2.h"
 
 #include "matrix/matrix.hpp"

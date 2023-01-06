@@ -166,23 +166,35 @@ class PerfRecord {
 };
 
 template<typename T, typename U>
-inline constexpr bool is_transmutable_into_v = (std::alignment_of_v<T> == std::alignment_of_v<U>) && (sizeof(T) == sizeof(U)); 
+struct is_transmutable_into
+	: std::integral_constant<bool, (std::alignment_of_v<T> == std::alignment_of_v<U>) && (sizeof(T) == sizeof(U))>
+{ };
+
+template<typename T, typename U>
+inline constexpr bool is_transmutable_into_v = is_transmutable_into<T, U>::value;
 
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
-static bool is_literal_zero(T val) {
-    typedef std::conditional_t<
-        is_transmutable_into_v<T, int>, int,
-        std::conditional_t<
-            is_transmutable_into_v<T, long>, long,
-            std::nullptr_t
-        >
-    > Repr;
+struct make_integral {
+	using type =
+		std::conditional_t<is_transmutable_into_v<T, char>, char,
+		std::conditional_t<is_transmutable_into_v<T, short>, short, 
+		std::conditional_t<is_transmutable_into_v<T, int>, int,
+		std::conditional_t<is_transmutable_into_v<T, long>, long,
+		std::conditional_t<is_transmutable_into_v<T, long long>, long long,
+		void>>>>>;
+};
 
-    union U { T b; Repr r; };
+template<typename T>
+using make_integral_t = typename make_integral<T>::type;
 
-    auto instance = U{};
-    instance.b = val;
-    return instance.r == 0;
+template<typename T>
+constexpr inline bool is_literal_zero(T val) {
+	union {
+		T base;
+		make_integral_t<T> repr;
+	} sh { val };
+
+	return sh.repr == 0;
 }
 
 #ifdef USE_CUDA

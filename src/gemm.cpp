@@ -1,4 +1,3 @@
-#include <fmt/core.h>
 #include <starpu.h>
 #include <starpu_mpi.h>
 #include <algorithm>
@@ -11,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "fmt/core.h"
 #include "matrix/matrix.hpp"
 #include "util/helper.hpp"
 #include "util/argparse.hpp"

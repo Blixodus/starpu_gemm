@@ -451,6 +451,23 @@ extern "C" double dlange_(
     double* work
 );
 
+extern "C" void sgesvd_(
+    char* jobu,
+    char* jobvt,
+    int* m,
+    int* n,
+    float* A,
+    int* lda,
+    float* S,
+    float* U,
+    int* ldu,
+    float* VT,
+    int* ldvt,
+    float* work,
+    int* lwork,
+    int* info
+);
+
 extern "C" void dgesvd_(
     char* jobu,
     char* jobvt,
@@ -533,21 +550,21 @@ DataType PPMatrix<DataType>::norm2(PPMatrix<DataType>& A) {
     int N   = checked_cast<int>(A.cols);
     int LDA = checked_cast<int>(A.ld);
 
-    auto S = std::vector<DataType>(std::min(M, N));
-    DataType* U = nullptr;
+    auto lw = std::min(A.rows, A.cols);
+    auto lwork_base = std::min(A.rows, A.cols) * 50;
+
+    auto S = std::vector<DataType>(lw);
     int LDU = 1;
-    DataType* VT = nullptr;
     int LDVT = 1;
-    int LWORK = std::min(M, N) * 50;
-    auto WORK = std::vector<DataType>(LWORK);
+    int LWORK = checked_cast<int>(lwork_base);
+    auto WORK = std::vector<DataType>(lwork_base);
     int INFO = 0;
 
     if constexpr (std::is_same_v<DataType, f32>) {
-        throw std::exception();
-        // return sgesvd_(&norm, &M, &N, A.ptr, &LD, nullptr);
+        sgesvd_(&JOBU, &JOBVT, &M, &N, A.ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
     } else {
         static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
-        dgesvd_(&JOBU, &JOBVT, &M, &N, A.ptr, &LDA, S.data(), U, &LDU, VT, &LDVT, WORK.data(), &LWORK, &INFO);
+        dgesvd_(&JOBU, &JOBVT, &M, &N, A.ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
     }
 
     return S[0];
