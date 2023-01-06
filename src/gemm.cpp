@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#define FMT_HEADER_ONLY
+//#define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include "matrix/matrix.hpp"
 #include "util/helper.hpp"
