@@ -142,7 +142,7 @@ set( CBLAS_MT FALSE )
 find_package(CBLAS REQUIRED)
 
 # search for fmtlib
-include_directories(${PROJECT_SOURCE_DIR}/fmt/include)
+include_directories(src/fmt/include)
 
 # Add libraries
 # -------------
