@@ -16,7 +16,7 @@ static void de_f32f16_flat(float* __restrict in, f16* __restrict a, f16* __restr
     }
 }
 
-static void de_f32F16(float* __restrict in, f16* __restrict a, f16* __restrict b, f16* __restrict c, size_t rows, size_t cols, size_t ld) {
+static void de_f32f16(float* __restrict in, f16* __restrict a, f16* __restrict b, f16* __restrict c, size_t rows, size_t cols, size_t ld) {
     for (size_t i = 0; i < rows; i++) {
         for (size_t j = 0; j < cols; j++) {
             const auto idx = i * ld + j;
@@ -41,6 +41,18 @@ static void re_f32f16_flat(f16* __restrict a, f16* __restrict b, f16* __restrict
         float ci = __half2float(c[i]);
 
         out[i] = ai + bi + ci;
+    }
+}
+
+static void re_f32f16(f16* __restrict a, f16* __restrict b, f16* __restrict c, float* __restrict out, size_t rows, size_t cols, size_t ld) {
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < cols; j++) {
+            float ai = __half2float(a[i * rows + j]);
+            float bi = __half2float(b[i * rows + j]);
+            float ci = __half2float(c[i * rows + j]);
+
+            out[i * ld + j] = ai + bi + ci;
+        }
     }
 }
 
@@ -95,16 +107,25 @@ __global__ void f32tof64_flat(f32* __restrict src, f64* __restrict dst, u32 size
     }
 }
 
-__global__ void extractf32high_flat(f64* __restrict src, f32* __restrict dst, u32 size) {
+__global__ void extractf32_high_flat(f64* __restrict src, f32* __restrict dst, u32 size) {
     auto idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
         dst[idx] = static_cast<f32>(src[idx]);
     }
 }
 
-__global__ void extractf32low_flat(f64* __restrict src, f32* __restrict dst, u32 size) {
+__global__ void extractf32_low_flat(f64* __restrict src, f32* __restrict dst, u32 size) {
     auto idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
         dst[idx] = static_cast<float>(src[idx] - static_cast<double>(static_cast<float>(src[idx])));
+    }
+}
+
+__global__ void extractf32_mixedhl_flat(f64* __restrict src, f32* __restrict hi, f32* __restrict lo, u32 size) {
+    auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        f32 tmp = static_cast<f32>(src[idx]);
+        hi[idx] = tmp;
+        lo[idx] = static_cast<f32>(src[idx] - static_cast<f64>(tmp));
     }
 }

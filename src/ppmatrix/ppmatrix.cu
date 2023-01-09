@@ -53,8 +53,145 @@ PerfRecord ppgemm_f32(
     f32 beta,
     PPMatrix<f32>& C
 ) {
-    fmt::print("/!\\ not implemented\n");
-    throw std::exception();
+    assert(A.rows == C.rows);
+    assert(B.cols == C.cols);
+    assert(A.cols == B.rows);
+
+    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+
+    PerfRecord perf;
+
+    // ###########################################
+    // STEP 0: preparation
+    // ###########################################
+
+    // alloc CPU buffers
+    f16 *A_1, *A_2, *A_3, *B_1, *B_2, *B_3, *C_1, *C_2, *C_3;
+
+    HANDLE_ERR(cudaMallocHost(&A_1, A.rows * A.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&A_2, A.rows * A.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&A_3, A.rows * A.cols * sizeof(f16)));
+
+    HANDLE_ERR(cudaMallocHost(&B_1, B.rows * B.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&B_2, B.rows * B.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&B_3, B.rows * B.cols * sizeof(f16)));
+
+    HANDLE_ERR(cudaMallocHost(&C_1, C.rows * C.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&C_2, C.rows * C.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMallocHost(&C_3, C.rows * C.cols * sizeof(f16)));
+
+    // alloc GPU buffers
+    f16 *dA_1, *dA_2, *dA_3, *dB_1, *dB_2, *dB_3, *dC_1, *dC_2, *dC_3;
+
+    HANDLE_ERR(cudaMalloc(&dA_1, A.rows * A.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dA_2, A.rows * A.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dA_3, A.rows * A.cols * sizeof(f16)));
+
+    HANDLE_ERR(cudaMalloc(&dB_1, B.rows * B.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dB_2, B.rows * B.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dB_3, B.rows * B.cols * sizeof(f16)));
+
+    HANDLE_ERR(cudaMalloc(&dC_1, C.rows * C.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dC_2, C.rows * C.cols * sizeof(f16)));
+    HANDLE_ERR(cudaMalloc(&dC_3, C.rows * C.cols * sizeof(f16)));
+
+    // use the default stream so that no sync are needed before / after a call to this function
+    cudaStream_t s0 = 0;
+
+    // register streams
+    // streams are created as cudaStreamNonBlocking, meaning they do not
+    // implicitly sync with the default stream
+    cudaStream_t s1, s2, s3, s4, s5;
+    cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking);
+    cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking);
+    cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking);
+    cudaStreamCreateWithFlags(&s4, cudaStreamNonBlocking);
+    cudaStreamCreateWithFlags(&s5, cudaStreamNonBlocking);
+
+    // register events
+    cudaEvent_t e0, e1;
+    cudaEventCreate(&e0);
+    cudaEventCreate(&e1);
+
+    // ###########################################
+    // STEP 1: precision-decompose and send A & B
+    // ###########################################
+
+    // decompose A and B on the host (don't start copying yet to get accurate perf numbers)
+    de_f32f16(A.ptr, A_1, A_2, A_3, A.rows, A.cols, A.ld);
+    de_f32f16(B.ptr, B_1, B_2, B_3, B.rows, B.cols, B.ld);
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // copy A_1, B_1, C_1 to GPU
+    cudaMemcpyAsync(dA_1, A_1, A.rows * A.cols * sizeof(f16), cudaMemcpyHostToDevice, s0);
+    cudaMemcpyAsync(dB_1, B_1, B.rows * B.cols * sizeof(f16), cudaMemcpyHostToDevice, s1);
+    cudaMemcpyAsync(dC_1, C_1, C.rows * C.cols * sizeof(f16), cudaMemcpyHostToDevice, s2);
+
+    // copy A_2, B_2, C_2 to GPU
+    cudaMemcpyAsync(dA_2, A_2, A.rows * A.cols * sizeof(f16), cudaMemcpyHostToDevice, s3);
+    cudaMemcpyAsync(dB_2, B_2, B.rows * B.cols * sizeof(f16), cudaMemcpyHostToDevice, s4);
+    cudaMemcpyAsync(dC_2, C_2, C.rows * C.cols * sizeof(f16), cudaMemcpyHostToDevice, s5);
+
+    // ###################################################
+    // STEP 2: convert dA_1, dB_1 and dC_1 to fp32
+    // ###################################################
+
+    // ###################################################
+    // STEP 8 wait for everything to finish
+    // ###################################################
+
+    cudaStreamSynchronize(s0);
+    cudaStreamSynchronize(s1);
+    cudaStreamSynchronize(s2);
+    cudaStreamSynchronize(s3);
+    cudaStreamSynchronize(s4);
+    cudaStreamSynchronize(s5);
+
+    perf.compute = std::chrono::high_resolution_clock::now() - start;
+
+    // ###################################################
+    // STEP 9: cleanup
+    // ###################################################
+
+    cudaStreamDestroy(s0);
+    cudaStreamDestroy(s1);
+    cudaStreamDestroy(s2);
+    cudaStreamDestroy(s3);
+    cudaStreamDestroy(s4);
+    cudaStreamDestroy(s5);
+
+    cudaEventDestroy(e0);
+    cudaEventDestroy(e1);
+
+    // ###################################################
+    // STEP 10: precision-recompose C
+    // ###################################################
+    re_f32f16(C_1, C_2, C_3, C.ptr, C.rows, C.cols, C.ld);
+
+    cudaFree(dA_1);
+    cudaFree(dA_2);
+    cudaFree(dA_3);
+    cudaFree(dB_1);
+    cudaFree(dB_2);
+    cudaFree(dB_3);
+    cudaFree(dC_1);
+    cudaFree(dC_2);
+    cudaFree(dC_3);
+
+    cudaFreeHost(A_1);
+    cudaFreeHost(A_2);
+    cudaFreeHost(A_3);
+    cudaFreeHost(B_1);
+    cudaFreeHost(B_2);
+    cudaFreeHost(B_3);
+    cudaFreeHost(C_1);
+    cudaFreeHost(C_2);
+    cudaFreeHost(C_3);
+
+    return perf;
 }
 
 PerfRecord ppgemm_f64(
@@ -77,9 +214,9 @@ PerfRecord ppgemm_f64(
 
     PerfRecord perf;
 
-    // ####################
+    // ###########################################
     // STEP 0: preparation
-    // ####################
+    // ###########################################
 
     // alloc CPU buffers
     float *A_h, *A_l, *B_h, *B_l, *C_h, *C_l;
@@ -117,15 +254,14 @@ PerfRecord ppgemm_f64(
     // streams are created as cudaStreamNonBlocking, meaning they do not
     // implicitly sync with the default stream
     cudaStream_t s1, s2, s3;
-    cudaStreamCreateWithFlags(&s0, cudaStreamNonBlocking);
-    cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking);
-    cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking);
-    cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking);
+    HANDLE_ERR(cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking));
+    HANDLE_ERR(cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking));
+    HANDLE_ERR(cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking));
 
     // register events
     cudaEvent_t e0, e1;
-    cudaEventCreate(&e0);
-    cudaEventCreate(&e1);
+    HANDLE_ERR(cudaEventCreate(&e0));
+    HANDLE_ERR(cudaEventCreate(&e1));
 
     // ###########################################
     // STEP 1: precision-decompose and send A & B
@@ -140,17 +276,17 @@ PerfRecord ppgemm_f64(
     auto start = std::chrono::high_resolution_clock::now();
 
     // copy A_h to GPU
-    cudaMemcpyAsync(dA_h, A_h, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s0);
+    HANDLE_ERR(cudaMemcpyAsync(dA_h, A_h, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s0));
 
     // copy B_h to GPU
-    cudaMemcpyAsync(dB_h, B_h, B.rows * B.cols * sizeof(float), cudaMemcpyHostToDevice, s2);
+    HANDLE_ERR(cudaMemcpyAsync(dB_h, B_h, B.rows * B.cols * sizeof(float), cudaMemcpyHostToDevice, s2));
 
     // copy A_l to GPU
-    cudaMemcpyAsync(dA_l, A_l, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s1);
+    HANDLE_ERR(cudaMemcpyAsync(dA_l, A_l, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s1));
 
     // copy B_l to GPU
-    cudaMemcpyAsync(dB_l, B_l, B.rows * B.cols * sizeof(float), cudaMemcpyHostToDevice, s3);
-    cudaEventRecord(e1, s3);
+    HANDLE_ERR(cudaMemcpyAsync(dB_l, B_l, B.rows * B.cols * sizeof(float), cudaMemcpyHostToDevice, s3));
+    HANDLE_ERR(cudaEventRecord(e1, s3));
 
     // ###################################################
     // STEP 2: convert dA_h and dB_h to double
@@ -164,7 +300,7 @@ PerfRecord ppgemm_f64(
     f32tof64_flat<<<ceilDiv(B.rows * B.cols, 256U), 256, 0, s2>>>(dB_h, dB_dgemm, B.rows * B.cols);
 
     // notify that the conversion is done for dB_h
-    cudaEventRecord(e0, s2);
+    HANDLE_ERR(cudaEventRecord(e0, s2));
 
 
     // ###################################################
@@ -172,26 +308,26 @@ PerfRecord ppgemm_f64(
     // ###################################################
 
     // wait for s2 to finish converting dB_h into dB_dgemm
-    cudaStreamWaitEvent(s0, e0, 0);
+    HANDLE_ERR(cudaStreamWaitEvent(s0, e0, 0));
 
     // perform the dgemm (dRes_dgemm = dA_dgemm * dB_dgemm) on S0
-    cublasSetStream(handle, s0);
+    HANDLE_ERR(cublasSetStream(handle, s0));
 
     double beta_main = 0.0;
 
-    cublasDgemm(
+    HANDLE_ERR(cublasDgemm(
         handle,
         convertToCublas(transA), convertToCublas(transB),
         m, n, k,
         &alpha,
-        dA_dgemm, A.rows,
-        dB_dgemm, B.rows,
+        dA_dgemm, checked_cast<int>(A.rows),
+        dB_dgemm, checked_cast<int>(B.rows),
         &beta_main,
-        dRes_dgemm, C.rows
-    );
+        dRes_dgemm, checked_cast<int>(C.rows)
+    ));
     
     // notify that the dgemm on s0 is done
-    cudaEventRecord(e0, s0);
+    HANDLE_ERR(cudaEventRecord(e0, s0));
 
     // ###################################################
     // STEP 4: decompose dRes_dgemm into dC_h and dC_l
@@ -199,18 +335,15 @@ PerfRecord ppgemm_f64(
 
     // perform the decomposition immediatly on s0 because
     // it is the stream which performed the dgemm
-    extractf32high_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, C.rows * C.cols);
-
-    // wait for s0 to finish dgemm and perform the decomposition on s2
-    cudaStreamWaitEvent(s2, e0, 0);
-    extractf32low_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s2>>>(dRes_dgemm, dC_l, C.rows * C.cols);
-    cudaEventRecord(e0, s2); // s2 finished the decomposition
+    extractf32_mixedhl_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, dC_l, C.rows * C.cols);
+    
+    HANDLE_ERR(cudaEventRecord(e0, s0)); // s0 finished the decomposition
 
     // ###################################################
     // STEP 5: send back dC_h to the host
     // ###################################################
 
-    cudaMemcpyAsync(C_h, dC_h, C.rows * C.cols * sizeof(float), cudaMemcpyDeviceToHost, s0);
+    HANDLE_ERR(cudaMemcpyAsync(C_h, dC_h, C.rows * C.cols * sizeof(float), cudaMemcpyDeviceToHost, s0));
 
     // ###################################################
     // STEP 6: accumulate sgemm rounds
@@ -221,47 +354,47 @@ PerfRecord ppgemm_f64(
 
     // wait for s2 to finish the dC_l decomposition
     // and perform the sgemm dC_l =  dA_h * dB_l + dC_l
-    cudaStreamWaitEvent(s1, e0, 0);
-    cublasSetStream(handle, s1);
-    cublasSgemm(
+    HANDLE_ERR(cudaStreamWaitEvent(s1, e0, 0));
+    HANDLE_ERR(cublasSetStream(handle, s1));
+    HANDLE_ERR(cublasSgemm(
         handle,
         convertToCublas(transA), convertToCublas(transB),
         m, n, k,
         &sgemm_alpha,
-        dA_l, A.rows,
-        dB_h, B.rows,
+        dA_l, checked_cast<int>(A.rows),
+        dB_h, checked_cast<int>(B.rows),
         &sgemm_beta,
-        dC_l, C.rows
-    );
+        dC_l, checked_cast<int>(C.rows)
+    ));
 
     // wait for s4 to finish the upload of dC_h
     // and perform the sgemm dC_l = dA_l * dB_h + dC_l
-    cudaStreamWaitEvent(s1, e1, 0);
-    cublasSgemm(
+    HANDLE_ERR(cudaStreamWaitEvent(s1, e1, 0));
+    HANDLE_ERR(cublasSgemm(
         handle,
         convertToCublas(transA), convertToCublas(transB),
         m, n, k,
         &sgemm_alpha,
-        dA_h, A.rows,
-        dB_l, B.rows,
+        dA_h, checked_cast<int>(A.rows),
+        dB_l, checked_cast<int>(B.rows),
         &sgemm_beta,
-        dC_l, C.rows
-    );
+        dC_l, checked_cast<int>(C.rows)
+    ));
 
     // ###################################################
     // STEP 7: send the result back to the host
     // ###################################################
     
-    cudaMemcpyAsync(C_l, dC_l, C.rows * C.cols * sizeof(float), cudaMemcpyDeviceToHost, s1);
+    HANDLE_ERR(cudaMemcpyAsync(C_l, dC_l, C.rows * C.cols * sizeof(float), cudaMemcpyDeviceToHost, s1));
 
     // ###################################################
     // STEP 8 wait for everything to finish
     // ###################################################
 
-    cudaStreamSynchronize(s0);
-    cudaStreamSynchronize(s1);
-    cudaStreamSynchronize(s3);
-    cudaStreamSynchronize(s2);
+    HANDLE_ERR(cudaStreamSynchronize(s0));
+    HANDLE_ERR(cudaStreamSynchronize(s1));
+    HANDLE_ERR(cudaStreamSynchronize(s3));
+    HANDLE_ERR(cudaStreamSynchronize(s2));
 
     perf.compute = std::chrono::high_resolution_clock::now() - start;
 
@@ -269,13 +402,12 @@ PerfRecord ppgemm_f64(
     // STEP 9: cleanup
     // ###################################################
 
-    cudaStreamDestroy(s0);
-    cudaStreamDestroy(s1);
-    cudaStreamDestroy(s2);
-    cudaStreamDestroy(s3);
+    HANDLE_ERR(cudaStreamDestroy(s1));
+    HANDLE_ERR(cudaStreamDestroy(s2));
+    HANDLE_ERR(cudaStreamDestroy(s3));
 
-    cudaEventDestroy(e0);
-    cudaEventDestroy(e1);
+    HANDLE_ERR(cudaEventDestroy(e0));
+    HANDLE_ERR(cudaEventDestroy(e1));
 
     // ###################################################
     // STEP 10: precision-recompose C
@@ -283,21 +415,21 @@ PerfRecord ppgemm_f64(
 
     re_f64f32(C_h, C_l, C.ptr, C.rows, C.cols, C.ld);
 
-    cudaFree(dA_h);
-    cudaFree(dA_l);
-    cudaFree(dA_dgemm);
-    cudaFree(dB_h);
-    cudaFree(dB_l);
-    cudaFree(dB_dgemm);
-    cudaFree(dC_h);
-    cudaFree(dC_l);
-    cudaFree(dRes_dgemm);
+    HANDLE_ERR(cudaFree(dA_h));
+    HANDLE_ERR(cudaFree(dA_l));
+    HANDLE_ERR(cudaFree(dA_dgemm));
+    HANDLE_ERR(cudaFree(dB_h));
+    HANDLE_ERR(cudaFree(dB_l));
+    HANDLE_ERR(cudaFree(dB_dgemm));
+    HANDLE_ERR(cudaFree(dC_h));
+    HANDLE_ERR(cudaFree(dC_l));
+    HANDLE_ERR(cudaFree(dRes_dgemm));
 
-    cudaFreeHost(A_h);
-    cudaFreeHost(A_l);
-    cudaFreeHost(B_h);
-    cudaFreeHost(C_h);
-    cudaFreeHost(C_l);
+    HANDLE_ERR(cudaFreeHost(A_h));
+    HANDLE_ERR(cudaFreeHost(A_l));
+    HANDLE_ERR(cudaFreeHost(B_h));
+    HANDLE_ERR(cudaFreeHost(C_h));
+    HANDLE_ERR(cudaFreeHost(C_l));
 
     return perf;
 }
