@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <iostream>
 #include <chrono>
-#include <functional>
 #include <fmt/core.h>
 
 #include "starpu.h"
