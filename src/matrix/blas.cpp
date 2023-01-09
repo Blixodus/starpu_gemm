@@ -7,37 +7,7 @@
 #include <iostream>
 
 #include "blas.hpp"
-
-extern "C" void sgemm_(
-	char* transA,
-	char* transB,
-	int* m,
-	int* n,
-	int* k,
-	float* alpha,
-	float* A,
-	int* lda,
-	float* B,
-	int* ldb,
-	float* beta,
-	float* C,
-	int* ldc
-);
-extern "C" void dgemm_(
-	char* transA,
-	char* transB,
-	int* m,
-	int* n,
-	int* k,
-	double* alpha,
-	double* A,
-	int* lda,
-	double* B,
-	int* ldb,
-	double* beta,
-	double* C,
-	int* ldc
-);
+#include "../util/lapackAPI.hpp"
 
 template <typename DataType>
 void blas<DataType>::gemm(

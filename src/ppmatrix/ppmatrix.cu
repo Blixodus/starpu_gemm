@@ -2,13 +2,14 @@
 
 #include "ppmatrix.hpp"
 #include "pputils.hpp"
-#include "../util/helper.hpp"
 
 #define FMT_HEADER_ONLY
 #include "fmt/core.h"
 #include <chrono>
 #include <random>
 
+#include "../util/helper.hpp"
+#include "../util/lapackAPI.hpp"
 
 template <typename DataType>
 void PPMatrix<DataType>::rndFill() {
@@ -48,8 +49,8 @@ PerfRecord ppgemm_f32(
     char transA,
     char transB,
     f32 alpha,
-    PPMatrix<f32>& A,
-    PPMatrix<f32>& B,
+    const PPMatrix<f32>& A,
+    const PPMatrix<f32>& B,
     f32 beta,
     PPMatrix<f32>& C
 ) {
@@ -199,8 +200,8 @@ PerfRecord ppgemm_f64(
     char transA,
     char transB,
     f64 alpha,
-    PPMatrix<f64>& A,
-    PPMatrix<f64>& B,
+    const PPMatrix<f64>& A,
+    const PPMatrix<f64>& B,
     f64 beta,
     PPMatrix<f64>& C
 ) {
@@ -440,8 +441,8 @@ PerfRecord PPMatrix<DataType>::gemm(
         char transA,
         char transB,
         DataType alpha,
-        PPMatrix<DataType>& A,
-        PPMatrix<DataType>& B,
+        const PPMatrix<DataType>& A,
+        const PPMatrix<DataType>& B,
         DataType beta,
         PPMatrix<DataType>& C
 ) {
@@ -530,101 +531,13 @@ PerfRecord PPMatrix<DataType>::gemm(
     return PerfRecord{ h2dDone - start, computeDone - h2dDone, d2hDone - computeDone };
 }
 
-/*
-    OpenBLAS interface
-*/
-
-extern "C" void sgemm_(
-	char* transA,
-	char* transB,
-	int* m,
-	int* n,
-	int* k,
-	float* alpha,
-	float* A,
-	int* lda,
-	float* B,
-	int* ldb,
-	float* beta,
-	float* C,
-	int* ldc
-);
-
-extern "C" void dgemm_(
-	char* transA,
-	char* transB,
-	int* m,
-	int* n,
-	int* k,
-	double* alpha,
-	double* A,
-	int* lda,
-	double* B,
-	int* ldb,
-	double* beta,
-	double* C,
-	int* ldc
-);
-
-extern "C" float slange_(
-    char* norm,
-    int* m,
-    int* n,
-    float* A,
-    int* lda,
-    float* work
-);
-
-extern "C" double dlange_(
-    char* norm,
-    int* m,
-    int* n,
-    double* A,
-    int* lda,
-    double* work
-);
-
-extern "C" void sgesvd_(
-    char* jobu,
-    char* jobvt,
-    int* m,
-    int* n,
-    float* A,
-    int* lda,
-    float* S,
-    float* U,
-    int* ldu,
-    float* VT,
-    int* ldvt,
-    float* work,
-    int* lwork,
-    int* info
-);
-
-extern "C" void dgesvd_(
-    char* jobu,
-    char* jobvt,
-    int* m,
-    int* n,
-    double* A,
-    int* lda,
-    double* S,
-    double* U,
-    int* ldu,
-    double* VT,
-    int* ldvt,
-    double* work,
-    int* lwork,
-    int* info
-);
-
 template <typename DataType>
 void PPMatrix<DataType>::blasGemm(
     char transA,
     char transB,
     DataType alpha,
-    PPMatrix<DataType>& A,
-    PPMatrix<DataType>& B,
+    const PPMatrix<DataType>& A,
+    const PPMatrix<DataType>& B,
     DataType beta,
     PPMatrix<DataType>& C
 ) {
@@ -646,8 +559,8 @@ void PPMatrix<DataType>::blasGemm(
 
 template <typename DataType>
 void PPMatrix<DataType>::sub(
-    PPMatrix<DataType>& A,
-    PPMatrix<DataType>& B,
+    const PPMatrix<DataType>& A,
+    const PPMatrix<DataType>& B,
     PPMatrix<DataType>& C
 ) {
     assert((A.rows == B.rows) && (A.rows == B.rows));
@@ -661,30 +574,30 @@ void PPMatrix<DataType>::sub(
 }
 
 template <typename DataType>
-DataType PPMatrix<DataType>::norm(char norm, PPMatrix<DataType>& A) {
-    int M   = checked_cast<int>(A.rows);
-    int N   = checked_cast<int>(A.cols);
-    int LD  = checked_cast<int>(A.ld);
+DataType PPMatrix<DataType>::norm(char norm) const {
+    int M   = checked_cast<int>(this->rows);
+    int N   = checked_cast<int>(this->cols);
+    int LD  = checked_cast<int>(this->ld);
 
     if constexpr (std::is_same_v<DataType, f32>) {
-        return slange_(&norm, &M, &N, A.ptr, &LD, nullptr);
+        return slange_(&norm, &M, &N, this->ptr, &LD, nullptr);
     } else {
         static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
-        return dlange_(&norm, &M, &N, A.ptr, &LD, nullptr);
+        return dlange_(&norm, &M, &N, this->ptr, &LD, nullptr);
     }
 }
 
 
 template <typename DataType>
-DataType PPMatrix<DataType>::norm2(PPMatrix<DataType>& A) {
+DataType PPMatrix<DataType>::norm2() const {
     char JOBU = 'N';
     char JOBVT = 'N';
-    int M   = checked_cast<int>(A.rows);
-    int N   = checked_cast<int>(A.cols);
-    int LDA = checked_cast<int>(A.ld);
+    int M   = checked_cast<int>(this->rows);
+    int N   = checked_cast<int>(this->cols);
+    int LDA = checked_cast<int>(this->ld);
 
-    auto lw = std::min(A.rows, A.cols);
-    auto lwork_base = std::min(A.rows, A.cols) * 50;
+    auto lw = std::min(this->rows, this->cols);
+    auto lwork_base = std::min(this->rows, this->cols) * 50;
 
     auto S = std::vector<DataType>(lw);
     int LDU = 1;
@@ -694,10 +607,10 @@ DataType PPMatrix<DataType>::norm2(PPMatrix<DataType>& A) {
     int INFO = 0;
 
     if constexpr (std::is_same_v<DataType, f32>) {
-        sgesvd_(&JOBU, &JOBVT, &M, &N, A.ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
+        sgesvd_(&JOBU, &JOBVT, &M, &N, this->ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
     } else {
         static_assert(std::is_same_v<DataType, f64>, "Unsupported data type (only f32 and f64 are supported).");
-        dgesvd_(&JOBU, &JOBVT, &M, &N, A.ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
+        dgesvd_(&JOBU, &JOBVT, &M, &N, this->ptr, &LDA, S.data(), nullptr, &LDU, nullptr, &LDVT, WORK.data(), &LWORK, &INFO);
     }
 
     return S[0];

@@ -43,7 +43,7 @@ using bf16 = __nv_bfloat16;
 #define STARPU_MATRIX_ROWS(x) STARPU_MATRIX_GET_NX((x))
 #define STARPU_MATRIX_COLS(x) STARPU_MATRIX_GET_NY((x))
 
-inline starpu_data_access_mode operator|(starpu_data_access_mode a, starpu_data_access_mode b) {
+inline constexpr starpu_data_access_mode operator|(starpu_data_access_mode a, starpu_data_access_mode b) noexcept {
 	using T = std::underlying_type_t<starpu_data_access_mode>;
 	return static_cast<starpu_data_access_mode>(static_cast<T>(a) | static_cast<T>(b));
 }
@@ -72,7 +72,7 @@ struct MatrixInfo {
 };
 
 template <typename T>
-constexpr MatrixInfo<T> as_matrix(void* ptr) {
+constexpr MatrixInfo<T> as_matrix(void* ptr) noexcept {
 	auto iface = reinterpret_cast<starpu_matrix_interface*>(ptr);
 
 	return {
@@ -92,7 +92,7 @@ struct TensorInfo {
 };
 
 template <typename T>
-constexpr TensorInfo<T> as_tensor(void* ptr) {
+constexpr TensorInfo<T> as_tensor(void* ptr) noexcept {
 	auto iface = reinterpret_cast<starpu_ndim_interface*>(ptr);
 
 	return {
@@ -104,30 +104,8 @@ constexpr TensorInfo<T> as_tensor(void* ptr) {
 }
 
 template <typename T>
-inline constexpr T ceilDiv(T a, T b) noexcept {
+constexpr T ceilDiv(T a, T b) noexcept {
 	return (a + b - 1) / b;
-}
-
-template <typename Res, typename Base>
-inline constexpr Res checked_cast(Base val) {
-	return static_cast<Res>(val);
-}
-
-/**
- * Cast which is not runtime-checked by default
-*/
-template <typename Res, typename Base>
-inline constexpr Res unchecked_cast(Base val) {
-	return static_cast<Res>(val);
-}
-
-inline u32 stoui(const char* str) {
-	return checked_cast<u32>(std::stoul(str));
-}
-
-template <typename V, typename... T>
-inline constexpr std::array<V, sizeof...(T)> array(T&&... t) {
-	return {{ std::forward<V>(t)... }};
 }
 
 template <typename P>
@@ -179,7 +157,7 @@ struct is_transmutable_into
 { };
 
 template<typename T, typename U>
-inline constexpr bool is_transmutable_into_v = is_transmutable_into<T, U>::value;
+constexpr bool is_transmutable_into_v = is_transmutable_into<T, U>::value;
 
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
 struct make_integral {
@@ -196,13 +174,44 @@ template<typename T>
 using make_integral_t = typename make_integral<T>::type;
 
 template<typename T>
-constexpr inline bool is_literal_zero(T val) {
+constexpr bool is_literal_zero(T val) noexcept {
 	union {
 		T base;
 		make_integral_t<T> repr;
 	} sh { val };
 
 	return sh.repr == 0;
+}
+
+template <typename T>
+struct is_valid_cast_target : std::integral_constant<bool,
+		std::is_nothrow_constructible_v<T> && std::is_trivially_constructible_v<T>
+	>
+{ };
+
+template <typename T>
+constexpr bool is_valid_cast_target_v = is_valid_cast_target<T>::value;
+
+template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
+constexpr Res checked_cast(Base val) noexcept(noexcept(static_cast<Res>(val))) {
+	return static_cast<Res>(val);
+}
+
+/**
+ * Cast which is not runtime-checked by default
+*/
+template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
+constexpr Res unchecked_cast(Base val) noexcept(noexcept(static_cast<Res>(val))) {
+	return static_cast<Res>(val);
+}
+
+static inline u32 stoui(const char* str) {
+	return checked_cast<u32>(std::stoul(str));
+}
+
+template <typename V, typename... T>
+constexpr std::array<V, sizeof...(T)> array(T&&... t) {
+	return {{ std::forward<V>(t)... }};
 }
 
 #ifdef USE_CUDA
@@ -226,7 +235,7 @@ inline void handle_err(cublasStatus_t status, int line) {
 #endif
 
 template <typename DataType>
-constexpr std::string_view type_name() {
+constexpr std::string_view type_name() noexcept {
 	if constexpr (std::is_same_v<DataType, float>) {
 		return "single";
 	} else if constexpr (std::is_same_v<DataType, double>) {

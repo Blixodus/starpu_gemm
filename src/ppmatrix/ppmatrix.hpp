@@ -16,8 +16,8 @@ PerfRecord ppgemm_f32(
     char transA,
     char transB,
     f32 alpha,
-    PPMatrix<f32>& A,
-    PPMatrix<f32>& B,
+    const PPMatrix<f32>& A,
+    const PPMatrix<f32>& B,
     f32 beta,
     PPMatrix<f32>& C
 );
@@ -27,8 +27,8 @@ PerfRecord ppgemm_f64(
     char transA,
     char transB,
     f64 alpha,
-    PPMatrix<f64>& A,
-    PPMatrix<f64>& B,
+    const PPMatrix<f64>& A,
+    const PPMatrix<f64>& B,
     f64 beta,
     PPMatrix<f64>& C
 );
@@ -59,8 +59,8 @@ struct PPMatrix {
         char transA,
         char transB,
         DataType alpha,
-        PPMatrix<DataType>& A,
-        PPMatrix<DataType>& B,
+        const PPMatrix<DataType>& A,
+        const PPMatrix<DataType>& B,
         DataType beta,
         PPMatrix<DataType>& C
     );
@@ -69,8 +69,8 @@ struct PPMatrix {
         char transA,
         char transB,
         DataType alpha,
-        PPMatrix<DataType>& A,
-        PPMatrix<DataType>& B,
+        const PPMatrix<DataType>& A,
+        const PPMatrix<DataType>& B,
         DataType beta,
         PPMatrix<DataType>& C
     );
@@ -80,8 +80,8 @@ struct PPMatrix {
         char transA,
         char transB,
         DataType alpha,
-        PPMatrix<DataType>& A,
-        PPMatrix<DataType>& B,
+        const PPMatrix<DataType>& A,
+        const PPMatrix<DataType>& B,
         DataType beta,
         PPMatrix<DataType>& C
     ) {
@@ -94,11 +94,11 @@ struct PPMatrix {
     }
 
     static void sub(
-        PPMatrix<DataType>& A,
-        PPMatrix<DataType>& B,
+        const PPMatrix<DataType>& A,
+        const PPMatrix<DataType>& B,
         PPMatrix<DataType>& C
     );
 
-    static DataType norm(char norm, PPMatrix<DataType>& A);
-    static DataType norm2(PPMatrix<DataType>& A);
+    DataType norm(char norm) const;
+    DataType norm2() const;
 };

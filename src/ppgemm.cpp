@@ -85,10 +85,11 @@ void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) 
     fmt::print("checking...\n");
     PPMatrix<DataType>::sub(T, C, D);
     
-    auto diffNorm = PPMatrix<DataType>::norm('F', D);
-    auto truthNorm = PPMatrix<DataType>::norm('F', T);
 
-    fmt::print("error = {}\n", diffNorm / truthNorm);
+    auto diffNorm = D.norm('F');
+    auto truthNorm = T.norm('F');
+
+    fmt::print("relative error = {}\n", diffNorm / truthNorm);
 }
 
 template<typename DataType>
