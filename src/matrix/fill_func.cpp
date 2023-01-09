@@ -2,8 +2,6 @@
 #ifdef USE_CUDA
 #include <cuda.h>
 #endif
-#include <cstdio>
-#include <iostream>
 #include "fill_func.hpp"
 #include "../util/helper.hpp"
 

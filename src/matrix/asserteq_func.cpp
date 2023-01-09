@@ -2,7 +2,6 @@
 #ifdef USE_CUDA
 #include <cuda.h>
 #endif
-#include <iostream>
 #include "asserteq_func.hpp"
 #include "../util/helper.hpp"
 

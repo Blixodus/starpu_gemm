@@ -3,7 +3,6 @@
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #endif
-#include <iostream>
 
 #include "blas.hpp"
 #include "bzero_func.hpp"

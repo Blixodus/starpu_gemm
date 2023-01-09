@@ -2,7 +2,7 @@
 
 #include <starpu.h>
 #include <vector>
-#include <cstdio>
+#include <functional>
 #include <cmath>
 
 #include "tensor_asserteq_func.hpp"

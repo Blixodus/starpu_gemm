@@ -9,7 +9,6 @@
 
 #include "starpu.h"
 
-// #include "make_array.hpp"
 #include "dim_iter.hpp"
 
 #ifdef USE_CUDA

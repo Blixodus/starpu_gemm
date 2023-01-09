@@ -1,6 +1,7 @@
 #include "tensor_add_func.hpp"
 
 #include <vector>
+#include <functional>
 #include <starpu.h>
 
 #include "algorithm.hpp"

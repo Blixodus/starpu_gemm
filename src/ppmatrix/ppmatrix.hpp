@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <memory>
 #include <fmt/core.h>
 #include "../util/helper.hpp"
 #include "cublas_v2.h"

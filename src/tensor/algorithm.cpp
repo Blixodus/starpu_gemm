@@ -1,6 +1,5 @@
 #include "algorithm.hpp"
 
-#include <cstdio>
 #include <numeric>
 #include <tuple>
 #include <vector>

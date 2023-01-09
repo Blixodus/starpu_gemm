@@ -1,15 +1,6 @@
-#include <starpu.h>
-#include <starpu_mpi.h>
-#include <algorithm>
-#include <cassert>
 #include <chrono>
-#include <fstream>
 #include <iostream>
-#include <numeric>
-#include <vector>
 #include <fmt/core.h>
-
-#include "cublas_v2.h"
 
 #include "matrix/matrix.hpp"
 #include "util/argparse.hpp"

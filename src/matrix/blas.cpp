@@ -3,8 +3,6 @@
 #include <starpu_cublas_v2.h>
 #include "cublas_v2.h"
 #endif
-#include <exception>
-#include <iostream>
 
 #include "blas.hpp"
 #include "../util/lapackAPI.hpp"

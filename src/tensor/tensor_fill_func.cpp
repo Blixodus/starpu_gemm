@@ -2,7 +2,7 @@
 
 #include <starpu.h>
 #include <vector>
-#include <cstdio>
+#include <functional>
 
 #include "tensor_fill_func.hpp"
 #include "../util/helper.hpp"
