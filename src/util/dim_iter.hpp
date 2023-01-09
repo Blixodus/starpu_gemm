@@ -1,6 +1,7 @@
 #pragma once
 
 #include <numeric>
+#include <vector>
 
 template <typename IntType>
 class DimIter {

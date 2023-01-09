@@ -56,9 +56,9 @@ PerfRecord ppgemm_f32(
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
 
-    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
-    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
-    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+    int m = checked_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
     PerfRecord perf;
 
@@ -207,9 +207,9 @@ PerfRecord ppgemm_f64(
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
 
-    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
-    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
-    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+    int m = checked_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
     PerfRecord perf;
 
@@ -452,9 +452,9 @@ PerfRecord PPMatrix<DataType>::gemm(
 
     bool use_beta = !is_literal_zero(beta);
 
-    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
-    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
-    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+    int m = checked_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
     HANDLE_ERR(cudaMalloc(&dA, A.rows * A.cols * sizeof(DataType)));
     HANDLE_ERR(cudaMalloc(&dB, B.rows * B.cols * sizeof(DataType)));
@@ -541,9 +541,9 @@ void PPMatrix<DataType>::blasGemm(
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
 
-    int m = static_cast<int>((transA == 'N') ? A.rows : A.cols);
-    int n = static_cast<int>((transB == 'N') ? B.cols : B.rows);
-    int k = static_cast<int>((transA == 'N') ? A.cols : A.rows);
+    int m = checked_cast<int>((transA == 'N') ? A.rows : A.cols);
+    int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
+    int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
     if constexpr (std::is_same_v<DataType, f32>) {
         sgemm_(&transA, &transB, &m, &n, &k, &alpha, A.ptr, &m, B.ptr, &k, &beta, C.ptr, &m);

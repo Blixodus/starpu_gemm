@@ -5,11 +5,12 @@
 #include <type_traits>
 #include <iostream>
 #include <chrono>
+#include <functional>
 #include <fmt/core.h>
 
 #include "starpu.h"
 
-#include "make_array.hpp"
+// #include "make_array.hpp"
 #include "dim_iter.hpp"
 
 #ifdef USE_CUDA
@@ -190,8 +191,56 @@ struct is_valid_cast_target : std::integral_constant<bool,
 template <typename T>
 constexpr bool is_valid_cast_target_v = is_valid_cast_target<T>::value;
 
+template <typename T>
+constexpr std::string_view pretty_type_name_v;
+
+template <> constexpr std::string_view pretty_type_name_v<f32> = "f32";
+template <> constexpr std::string_view pretty_type_name_v<f64> = "f64";
+
+template <> constexpr std::string_view pretty_type_name_v<char> = "char";
+
+template <> constexpr std::string_view pretty_type_name_v<i8> = "i8";
+template <> constexpr std::string_view pretty_type_name_v<i16> = "i16";
+template <> constexpr std::string_view pretty_type_name_v<i32> = "i32";
+template <> constexpr std::string_view pretty_type_name_v<i64> = "i64";
+
+template <> constexpr std::string_view pretty_type_name_v<u8> = "u8";
+template <> constexpr std::string_view pretty_type_name_v<u16> = "u16";
+template <> constexpr std::string_view pretty_type_name_v<u32> = "u32";
+template <> constexpr std::string_view pretty_type_name_v<u64> = "u64";
+
 template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
-constexpr Res checked_cast(Base val) noexcept(noexcept(static_cast<Res>(val))) {
+constexpr Res checked_cast(Base val) {
+    auto throw_overflow{[&] { throw std::overflow_error(fmt::format("Bad cast: overflow while casting {} from {} to {}", val, pretty_type_name_v<Base>, pretty_type_name_v<Res>)); }};
+    auto throw_underflow{[&] { throw std::underflow_error(fmt::format("Bad cast: underflow while casting {} from {} to {}", val, pretty_type_name_v<Base>, pretty_type_name_v<Res>)); }};
+
+    constexpr auto res_is_int = std::is_integral_v<Res>;
+	constexpr auto base_is_int = std::is_integral_v<Base>;
+
+	if constexpr (base_is_int && res_is_int) {
+		constexpr auto res_is_signed = std::is_signed_v<Res>;
+    	constexpr auto base_is_signed = std::is_signed_v<Base>;
+    	using res_limits = std::numeric_limits<Res>; 
+
+		if constexpr (base_is_signed == res_is_signed) {
+            if constexpr (base_is_signed) {
+				if (__builtin_expect(val < res_limits::min(), 0)) {
+                	throw_underflow();
+				}
+            } else if (__builtin_expect(val > res_limits::max(), 0)) {
+                throw_overflow();
+            }
+		} else if constexpr (base_is_signed) {
+            if (__builtin_expect(val < 0, 0)) {
+                throw_underflow();
+            } else if (__builtin_expect(static_cast<std::make_unsigned_t<Base>>(val) > res_limits::max(), 0)) {
+                throw_overflow();
+            }
+		} else if (__builtin_expect(val > res_limits::max(), 0)) {
+			throw_overflow();
+		}
+	}
+	
 	return static_cast<Res>(val);
 }
 
@@ -199,17 +248,12 @@ constexpr Res checked_cast(Base val) noexcept(noexcept(static_cast<Res>(val))) {
  * Cast which is not runtime-checked by default
 */
 template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
-constexpr Res unchecked_cast(Base val) noexcept(noexcept(static_cast<Res>(val))) {
+constexpr Res unchecked_cast(Base val) noexcept {
 	return static_cast<Res>(val);
 }
 
 static inline u32 stoui(const char* str) {
 	return checked_cast<u32>(std::stoul(str));
-}
-
-template <typename V, typename... T>
-constexpr std::array<V, sizeof...(T)> array(T&&... t) {
-	return {{ std::forward<V>(t)... }};
 }
 
 #ifdef USE_CUDA

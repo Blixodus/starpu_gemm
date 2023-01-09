@@ -25,13 +25,13 @@ void blas<DataType>::gemm(
 	DataType* C,
 	u32 ldc
 ) {
-	auto m_cast = static_cast<int>(m);
-	auto n_cast = static_cast<int>(n);
-	auto k_cast = static_cast<int>(k);
+	auto m_cast = checked_cast<int>(m);
+	auto n_cast = checked_cast<int>(n);
+	auto k_cast = checked_cast<int>(k);
 
-	auto lda_cast = static_cast<int>(lda);
-	auto ldb_cast = static_cast<int>(ldb);
-	auto ldc_cast = static_cast<int>(ldc);
+	auto lda_cast = checked_cast<int>(lda);
+	auto ldb_cast = checked_cast<int>(ldb);
+	auto ldc_cast = checked_cast<int>(ldc);
 
 	if constexpr (std::is_same_v<DataType, float>) {
 		sgemm_(&transA, &transB, &m_cast, &n_cast, &k_cast, &alpha, A, &lda_cast, B, &ldb_cast, &beta, C, &ldc_cast);
@@ -65,22 +65,20 @@ void cublas<DataType>::gemm(
 ) {
 	cublasStatus_t stat;
 
-	auto m_cast = static_cast<int>(m);
-	auto n_cast = static_cast<int>(n);
-	auto k_cast = static_cast<int>(k);
+	auto m_cast = checked_cast<int>(m);
+	auto n_cast = checked_cast<int>(n);
+	auto k_cast = checked_cast<int>(k);
 
-	auto lda_cast = static_cast<int>(lda);
-	auto ldb_cast = static_cast<int>(ldb);
-	auto ldc_cast = static_cast<int>(ldc);
+	auto lda_cast = checked_cast<int>(lda);
+	auto ldb_cast = checked_cast<int>(ldb);
+	auto ldc_cast = checked_cast<int>(ldc);
 
 	if constexpr (std::is_same_v<DataType, float>) {
 		stat = cublasSgemm(
 			handle, convertToCublas(transa), convertToCublas(transb), m_cast, n_cast, k_cast, &alpha, A, lda_cast, B,
 			ldb_cast, &beta, C, ldc_cast
 		);
-	}
-
-	if constexpr (std::is_same_v<DataType, double>) {
+	} else if constexpr (std::is_same_v<DataType, double>) {
 		stat = cublasDgemm(
 			handle, convertToCublas(transa), convertToCublas(transb), m_cast, n_cast, k_cast, &alpha, A, lda_cast, B,
 			ldb_cast, &beta, C, ldc_cast
@@ -110,21 +108,19 @@ void cublas<DataType>::geam(
 ) {
 	cublasStatus_t stat;
 
-	auto m_cast = static_cast<int>(m);
-	auto n_cast = static_cast<int>(n);
+	auto m_cast = checked_cast<int>(m);
+	auto n_cast = checked_cast<int>(n);
 
-	auto lda_cast = static_cast<int>(lda);
-	auto ldb_cast = static_cast<int>(ldb);
-	auto ldc_cast = static_cast<int>(ldc);
+	auto lda_cast = checked_cast<int>(lda);
+	auto ldb_cast = checked_cast<int>(ldb);
+	auto ldc_cast = checked_cast<int>(ldc);
 
 	if constexpr (std::is_same_v<DataType, float>) {
 		stat = cublasSgeam(
 			handle, convertToCublas(transa), convertToCublas(transb), m_cast, n_cast, &alpha, A, lda_cast, &beta, B,
 			ldb_cast, C, ldc_cast
 		);
-	}
-
-	if constexpr (std::is_same_v<DataType, double>) {
+	} else if constexpr (std::is_same_v<DataType, double>) {
 		stat = cublasDgeam(
 			handle, convertToCublas(transa), convertToCublas(transb), m_cast, n_cast, &alpha, A, lda_cast, &beta, B,
 			ldb_cast, C, ldc_cast

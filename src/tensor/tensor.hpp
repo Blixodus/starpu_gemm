@@ -134,7 +134,7 @@ struct TensorData {
 			}
 
 			starpu_ndim_data_register(&handle, -1, 0, &ld[0], &dim_size[0], dims.size(), sizeof(DataType));
-      starpu_mpi_data_register(handle, tensor_mpi_tag++, static_cast<int>(linearize_idx(idx)) % size);
+      		starpu_mpi_data_register(handle, tensor_mpi_tag++, static_cast<int>(linearize_idx(idx)) % size);
 		}
 	}
 
