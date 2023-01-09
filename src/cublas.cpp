@@ -59,13 +59,9 @@ void test_gemm(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     B.fill(3);
     C.fill(0);
 
-    auto start = std::chrono::high_resolution_clock::now();
-
     auto perf = PPMatrix<DataType>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
-
-    cudaDeviceSynchronize();
     
-    std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
+    std::chrono::duration<double> time = perf.h2d + perf.compute + perf.d2h;
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
 
     if (quiet) {

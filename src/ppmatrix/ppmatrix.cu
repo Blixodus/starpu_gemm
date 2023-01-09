@@ -463,9 +463,7 @@ PerfRecord PPMatrix<DataType>::gemm(
     HANDLE_ERR(cudaHostRegister(A.ptr, A.rows * A.cols * sizeof(DataType), cudaHostRegisterDefault));
     HANDLE_ERR(cudaHostRegister(B.ptr, B.rows * B.cols * sizeof(DataType), cudaHostRegisterDefault));
 
-    if (use_beta) {
-        HANDLE_ERR(cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault));
-    }
+    HANDLE_ERR(cudaHostRegister(C.ptr, C.rows * C.cols * sizeof(DataType), cudaHostRegisterDefault));
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -473,7 +471,7 @@ PerfRecord PPMatrix<DataType>::gemm(
     HANDLE_ERR(cudaMemcpy(dB, B.ptr, B.rows * B.cols * sizeof(DataType), cudaMemcpyHostToDevice));
 
     if (use_beta) {
-        cudaMemcpy(dC, C.ptr, C.rows * C.cols * sizeof(DataType), cudaMemcpyHostToDevice);
+        HANDLE_ERR(cudaMemcpy(dC, C.ptr, C.rows * C.cols * sizeof(DataType), cudaMemcpyHostToDevice));
     }
 
     cudaDeviceSynchronize();

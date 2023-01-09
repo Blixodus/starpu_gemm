@@ -30,7 +30,7 @@ for file in sys.argv[1:]:
     labels.append(Path(file).stem)
 
 for i in range(len(y)):
-    plt.plot(x[:len(y[i])], y[i], label=labels[i], marker='o')
+    plt.semilogy(x[:len(y[i])], y[i], label=labels[i], marker='o')
 
 plt.xlabel('Matrix size (log)')
 plt.ylabel('Performance (gflops)')

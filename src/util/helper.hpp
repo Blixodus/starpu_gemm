@@ -33,8 +33,8 @@ using f32 = float;
 using f64 = double;
 
 #ifdef USE_CUDA
-using f16 = __half;
-using bf16 = __nv_bfloat16;
+using f16 	= __half;
+using bf16 	= __nv_bfloat16;
 #endif
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
