@@ -9,7 +9,7 @@ Tested as working using
 * cublas 11.0
 * starpu 1.3.99
 * openmpi
-* [fmt]{https://github.com/fmtlib/fmt}
+* [fmt](https://github.com/fmtlib/fmt)
 
 ### Build
 To build and run the experimental code
