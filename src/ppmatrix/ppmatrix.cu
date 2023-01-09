@@ -1,12 +1,10 @@
 #include <stdexcept>
+#include <fmt/core.h>
+#include <chrono>
+#include <random>
 
 #include "ppmatrix.hpp"
 #include "pputils.hpp"
-
-#define FMT_HEADER_ONLY
-#include "fmt/core.h"
-#include <chrono>
-#include <random>
 
 #include "../util/helper.hpp"
 #include "../util/lapackAPI.hpp"

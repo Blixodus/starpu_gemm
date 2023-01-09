@@ -143,7 +143,6 @@ find_package(CBLAS REQUIRED)
 
 # search for fmtlib
 find_package(fmt CONFIG REQUIRED)
-#include_directories(src/fmt/include)
 
 # Add libraries
 # -------------

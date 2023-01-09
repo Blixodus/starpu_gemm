@@ -2,11 +2,10 @@
 
 #include <vector>
 #include <memory>
+#include <fmt/core.h>
 #include "../util/helper.hpp"
 #include "cublas_v2.h"
 
-#define FMT_HEADER_ONLY
-#include "fmt/core.h"
 
 template <typename DataType>
 struct PPMatrix;

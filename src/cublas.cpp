@@ -7,9 +7,8 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include <fmt/core.h>
 
-//#define FMT_HEADER_ONLY
-#include "fmt/core.h"
 #include "cublas_v2.h"
 
 #include "matrix/matrix.hpp"

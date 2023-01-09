@@ -5,9 +5,7 @@
 #include <type_traits>
 #include <iostream>
 #include <chrono>
-
-#define FMT_HEADER_ONLY
-#include "fmt/core.h"
+#include <fmt/core.h>
 
 #include "starpu.h"
 
