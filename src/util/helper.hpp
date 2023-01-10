@@ -12,8 +12,7 @@
 #include "dim_iter.hpp"
 
 #ifdef USE_CUDA
-#include "cuda_fp16.h"
-#include "cuda_bf16.h"
+
 #endif
 
 // newtypes
@@ -32,8 +31,37 @@ using f32 = float;
 using f64 = double;
 
 #ifdef USE_CUDA
+#include "cuda_fp16.h"
+#include "cuda_bf16.h"
+#include "cublas_v2.h"
+
 using f16 	= __half;
 using bf16 	= __nv_bfloat16;
+
+inline cublasOperation_t convertToCublas(char trans) {
+	switch (trans) {
+		case 'N': return CUBLAS_OP_N;
+		case 'T': return CUBLAS_OP_T;
+		case 'C': return CUBLAS_OP_C;
+		default: throw std::exception();
+	}
+}
+
+#define HANDLE_ERR(val) handle_err((val), __LINE__)
+
+inline void handle_err(cudaError_t val, int line) {
+    if (__builtin_expect(val != cudaSuccess, 0)) {
+        fmt::print("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError()));
+        throw std::exception();
+    }
+}
+
+inline void handle_err(cublasStatus_t status, int line) {
+	if (__builtin_expect(status != CUBLAS_STATUS_SUCCESS, 0)) {
+		fmt::print("CUBLAS error at line {}: {}\n", line, status);
+		throw std::exception();
+	}
+}
 #endif
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
@@ -45,18 +73,6 @@ inline constexpr starpu_data_access_mode operator|(starpu_data_access_mode a, st
 	return static_cast<starpu_data_access_mode>(static_cast<T>(a) | static_cast<T>(b));
 }
 
-#ifdef USE_CUDA
-#include "cublas_v2.h"
-
-inline cublasOperation_t convertToCublas(char trans) {
-	switch (trans) {
-		case 'N': return CUBLAS_OP_N;
-		case 'T': return CUBLAS_OP_T;
-		case 'C': return CUBLAS_OP_C;
-		default: throw std::exception();
-	}
-}
-#endif
 
 template <typename T>
 struct MatrixInfo {
@@ -253,26 +269,6 @@ constexpr Res unchecked_cast(Base val) noexcept {
 static inline u32 stoui(const char* str) {
 	return checked_cast<u32>(std::stoul(str));
 }
-
-#ifdef USE_CUDA
-
-#define HANDLE_ERR(val) handle_err((val), __LINE__)
-
-inline void handle_err(cudaError_t val, int line) {
-    if (__builtin_expect(val != cudaSuccess, 0)) {
-        fmt::print("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError()));
-        throw std::exception();
-    }
-}
-
-inline void handle_err(cublasStatus_t status, int line) {
-	if (__builtin_expect(status != CUBLAS_STATUS_SUCCESS, 0)) {
-		fmt::print("CUBLAS error at line {}: {}\n", line, status);
-		throw std::exception();
-	}
-}
-
-#endif
 
 template <typename DataType>
 constexpr std::string_view type_name() noexcept {
