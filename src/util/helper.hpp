@@ -117,7 +117,7 @@ constexpr TensorInfo<T> as_tensor(void* ptr) noexcept {
 }
 
 template <typename T>
-constexpr T ceilDiv(T a, T b) noexcept {
+constexpr T ceilDiv(T a, T b) {
 	return (a + b - 1) / b;
 }
 
@@ -164,8 +164,8 @@ struct is_transmutable_into
     : std::integral_constant<bool,
         (std::alignment_of_v<T> == std::alignment_of_v<U>) &&
         (sizeof(T) == sizeof(U)) &&
-        std::is_trivially_copyable_v<T> &&
-        std::is_trivially_copyable_v<U>
+        std::is_trivially_copyable_v<T> && std::is_trivially_copyable_v<U> &&
+		std::is_trivially_constructible_v<T> && std::is_trivially_constructible_v<U>
     >
 { };
 
@@ -197,13 +197,15 @@ constexpr bool is_literal_zero(T val) noexcept {
 }
 
 template <typename T>
-struct is_valid_cast_target : std::integral_constant<bool,
-		std::is_nothrow_constructible_v<T> && std::is_trivially_constructible_v<T>
+struct is_valid_cast_param : std::integral_constant<bool,
+		std::is_nothrow_constructible_v<T> && 
+		std::is_trivially_constructible_v<T> &&
+		std::is_arithmetic_v<T>
 	>
 { };
 
 template <typename T>
-constexpr bool is_valid_cast_target_v = is_valid_cast_target<T>::value;
+constexpr bool is_valid_cast_param_v = is_valid_cast_param<T>::value;
 
 template <typename T>
 constexpr std::string_view pretty_type_name_v;
@@ -223,37 +225,42 @@ template <> constexpr std::string_view pretty_type_name_v<u16> = "u16";
 template <> constexpr std::string_view pretty_type_name_v<u32> = "u32";
 template <> constexpr std::string_view pretty_type_name_v<u64> = "u64";
 
-template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
+template <
+	typename Res,
+	typename Base,
+	std::enable_if_t<std::conjunction_v<
+		is_valid_cast_param<Base>,
+		is_valid_cast_param<Res>
+	>, bool> = true
+>
 constexpr Res checked_cast(Base val) {
     auto throw_overflow{[&] { throw std::overflow_error(fmt::format("Bad cast: overflow while casting {} from {} to {}", val, pretty_type_name_v<Base>, pretty_type_name_v<Res>)); }};
     auto throw_underflow{[&] { throw std::underflow_error(fmt::format("Bad cast: underflow while casting {} from {} to {}", val, pretty_type_name_v<Base>, pretty_type_name_v<Res>)); }};
 
-    constexpr auto res_is_int = std::is_integral_v<Res>;
-	constexpr auto base_is_int = std::is_integral_v<Base>;
+    constexpr auto res_is_signed = std::is_signed_v<Res>;
+    constexpr auto base_is_signed = std::is_signed_v<Base>;
 
-	if constexpr (base_is_int && res_is_int) {
-		constexpr auto res_is_signed = std::is_signed_v<Res>;
-    	constexpr auto base_is_signed = std::is_signed_v<Base>;
-    	using res_limits = std::numeric_limits<Res>; 
-
-		if constexpr (base_is_signed == res_is_signed) {
-            if constexpr (base_is_signed) {
-				if (__builtin_expect(val < res_limits::min(), 0)) {
-                	throw_underflow();
-				}
-            } else if (__builtin_expect(val > res_limits::max(), 0)) {
-                throw_overflow();
-            }
-		} else if constexpr (base_is_signed) {
-            if (__builtin_expect(val < 0, 0)) {
+    using res_limits = std::numeric_limits<Res>;
+    
+    if constexpr (base_is_signed == res_is_signed) {
+        if constexpr (base_is_signed) {
+            if (__builtin_expect(val < res_limits::lowest(), 0)) {
                 throw_underflow();
-            } else if (__builtin_expect(static_cast<std::make_unsigned_t<Base>>(val) > res_limits::max(), 0)) {
-                throw_overflow();
             }
-		} else if (__builtin_expect(val > res_limits::max(), 0)) {
-			throw_overflow();
-		}
-	}
+        }
+        
+        if (__builtin_expect(val > res_limits::max(), 0)) {
+            throw_overflow();
+        }
+    } else if constexpr (base_is_signed) {
+        if (__builtin_expect(val < 0, 0)) {
+            throw_underflow();
+        } else if (__builtin_expect(static_cast<std::make_unsigned_t<Base>>(val) > res_limits::max(), 0)) {
+            throw_overflow();
+        }
+    } else if (__builtin_expect(val > res_limits::max(), 0)) {
+        throw_overflow();
+    }
 	
 	return static_cast<Res>(val);
 }
@@ -261,7 +268,14 @@ constexpr Res checked_cast(Base val) {
 /**
  * Cast which is not runtime-checked by default
 */
-template <typename Res, typename Base, std::enable_if_t<is_valid_cast_target_v<Res>, bool> = true>
+template <
+	typename Res,
+	typename Base,
+	std::enable_if_t<std::conjunction_v<
+		is_valid_cast_param<Base>,
+		is_valid_cast_param<Res>
+	>, bool> = true
+>
 constexpr Res unchecked_cast(Base val) noexcept {
 	return static_cast<Res>(val);
 }
