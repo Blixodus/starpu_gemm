@@ -60,6 +60,10 @@ You can create a Guix shell with the GEMM example and Chameleon using the follow
   guix shell --pure --preserve="^OMPI_MCA|^SLURM|^STARPU|^OMP" starpu-example-cppgemm chameleon openssh slurm@22 --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
 #+END_SRC
 
+#+BEGIN_SRC shell
+  LD_PRELOAD=/usr/lib64/libcuda.so guix shell --pure --preserve=^LD_PRELOAD chameleon-cuda starpu-example-cppgemm-cuda openssh --with-commit=starpu-cuda=8654bf062cddb87e7b23ef62ad13a0f5f1e18c77 --with-branch=starpu-example-cppgemm-cuda=main
+#+END_SRC
+
 In the Guix shell you can execute with e.g.
 
 #+BEGIN_SRC shell
