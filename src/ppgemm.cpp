@@ -77,6 +77,30 @@ void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) 
     fmt::print("ppgemm...\n");
     PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
+    // print A values
+    for (u32 i = 0; i < m; i++) {
+        for (u32 j = 0; j < k; j++) {
+            fmt::print("A({},{}) = {}\n", i, j, A.ptr[i * A.ld + j]);
+        }
+    }
+
+    // print B values
+    fmt::print("\nB values\n");
+
+    for (u32 i = 0; i < k; i++) {
+        for (u32 j = 0; j < n; j++) {
+            fmt::print("B({},{}) = {}\n", i, j, B.ptr[i * B.ld + j]);
+        }
+    }
+
+    // print C values different than 0
+    fmt::print("\nC values\n");
+    for (u32 i = 0; i < m; i++) {
+        for (u32 j = 0; j < n; j++) {
+            fmt::print("C({},{}) = {}\n", i, j, C.ptr[i * C.ld + j]);
+        }
+    }
+
     fmt::print("computing cublas truth source...\n");
     cublasSetStream(handle, 0);
     PPMatrix<DataType>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, T);
