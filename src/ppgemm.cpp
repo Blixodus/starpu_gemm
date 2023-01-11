@@ -67,6 +67,7 @@ void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) 
 
     PPMatrix<DataType> A(m, k), B(k, n), C(m, n), T(m, n), D(m, n), OB(m, n);
 
+    fmt::print("ok\n");
     fmt::print("random fill...\n");
     A.rndFill();
     B.rndFill();
@@ -168,7 +169,6 @@ void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 	std::chrono::duration<double> time = std::chrono::high_resolution_clock::now() - start;
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
 
-    fmt::print("ok\n");
     if (quiet) {
         fmt::print("{},{},{},{},{:.3f}\n", m, n, k, block_size, flops * 1000);
     } else {
