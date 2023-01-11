@@ -255,7 +255,6 @@ PerfRecord ppgemm_f64(
     // streams are created as cudaStreamNonBlocking, meaning they do not
     // implicitly sync with the default stream
     cudaStream_t s1, s2, s3;
-    HANDLE_ERR(cudaStreamCreateWithFlags(&s0, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking));
@@ -358,30 +357,30 @@ PerfRecord ppgemm_f64(
     // and perform the sgemm dC_l =  dA_h * dB_l + dC_l
     HANDLE_ERR(cudaStreamWaitEvent(s1, e0, 0));
     HANDLE_ERR(cublasSetStream(handle, s1));
-    HANDLE_ERR(cublasSgemm(
-        handle,
-        convertToCublas(transA), convertToCublas(transB),
-        m, n, k,
-        &sgemm_alpha,
-        dA_l, checked_cast<int>(A.rows),
-        dB_h, checked_cast<int>(B.rows),
-        &sgemm_beta,
-        dC_l, checked_cast<int>(C.rows)
-    ));
+    // HANDLE_ERR(cublasSgemm(
+    //     handle,
+    //     convertToCublas(transA), convertToCublas(transB),
+    //     m, n, k,
+    //     &sgemm_alpha,
+    //     dA_l, checked_cast<int>(A.rows),
+    //     dB_h, checked_cast<int>(B.rows),
+    //     &sgemm_beta,
+    //     dC_l, checked_cast<int>(C.rows)
+    // ));
 
     // wait for s4 to finish the upload of dC_h
     // and perform the sgemm dC_l = dA_l * dB_h + dC_l
     HANDLE_ERR(cudaStreamWaitEvent(s1, e1, 0));
-    HANDLE_ERR(cublasSgemm(
-        handle,
-        convertToCublas(transA), convertToCublas(transB),
-        m, n, k,
-        &sgemm_alpha,
-        dA_h, checked_cast<int>(A.rows),
-        dB_l, checked_cast<int>(B.rows),
-        &sgemm_beta,
-        dC_l, checked_cast<int>(C.rows)
-    ));
+    // HANDLE_ERR(cublasSgemm(
+    //     handle,
+    //     convertToCublas(transA), convertToCublas(transB),
+    //     m, n, k,
+    //     &sgemm_alpha,
+    //     dA_h, checked_cast<int>(A.rows),
+    //     dB_l, checked_cast<int>(B.rows),
+    //     &sgemm_beta,
+    //     dC_l, checked_cast<int>(C.rows)
+    // ));
 
     // ###################################################
     // STEP 7: send the result back to the host
@@ -432,6 +431,8 @@ PerfRecord ppgemm_f64(
     HANDLE_ERR(cudaFreeHost(B_h));
     HANDLE_ERR(cudaFreeHost(C_h));
     HANDLE_ERR(cudaFreeHost(C_l));
+
+    cudaDeviceSynchronize();
 
     return perf;
 }
