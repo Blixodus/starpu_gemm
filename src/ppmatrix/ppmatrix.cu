@@ -213,6 +213,8 @@ PerfRecord ppgemm_f64(
     int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
     int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
+    hello<<<1, 1>>>();
+
     PerfRecord perf;
 
     // ###########################################
@@ -276,8 +278,6 @@ PerfRecord ppgemm_f64(
     de_f64f32(B.ptr, B_h, B_l, B.rows, B.cols, B.ld);
     
     auto start = std::chrono::high_resolution_clock::now();
-
-    hello<<<1, 1>>>();
 
     // copy A_h to GPU
     HANDLE_ERR(cudaMemcpyAsync(dA_h, A_h, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s0));
