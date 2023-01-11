@@ -49,7 +49,7 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 	auto flops = 2.0 * m * n * k / time.count() / 1e12;
 	
 	if (quiet) {
-		fmt::print("{},{},{},{},{:.3f}\n", m, n, k, block_size, flops * 1000);
+		fmt::print("{},{},{:.6f},{},{:.3f},{:.3f}\n", m, 0, time.count(), 0, flops * 1000, flops * 1000);
 	} else {
 		fmt::print("StarPU -- Time : {}s\n", time.count());
 		fmt::print("StarPU -- Performance : {:.3f}Tflop/s\n", 2.0 * m * n * k / time.count() / 1e12);

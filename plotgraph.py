@@ -12,6 +12,8 @@ x = None
 y = []
 labels = []
 
+os.makedirs('plot', exist_ok=True)
+
 for file in sys.argv[1:]:
     if file.endswith('.csv') == False:
         print('The file must be a csv file')
@@ -32,9 +34,11 @@ for file in sys.argv[1:]:
 for i in range(len(y)):
     plt.semilogy(x[:len(y[i])], y[i], label=labels[i], marker='o')
 
+# plt.figure(0)
 plt.xlabel('Matrix size (log)')
 plt.ylabel('Performance (gflops)')
 plt.legend()
-
-os.makedirs('plot', exist_ok=True)
 plt.savefig('plot/' + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + '.png')
+
+# plt.figure(1)
+

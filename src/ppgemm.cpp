@@ -77,7 +77,7 @@ void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) 
     fmt::print("ppgemm...\n");
     PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
-    fmt::print("computing blas truth source...\n");
+    fmt::print("computing cublas truth source...\n");
     cublasSetStream(handle, 0);
     PPMatrix<DataType>::gemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, T);
 
@@ -107,9 +107,10 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
     std::chrono::duration<double> time = perf.d2h + perf.compute + perf.h2d;
 
     auto flops = 2.0 * m * n * k / time.count() / 1e12;
+    auto compute_flops = 2.0 * m * n * k / perf.compute.count() / 1e12;
 
     if (quiet) {
-        fmt::print("{},{},{},{},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), flops * 1000);
+        fmt::print("{},{:.6f},{:.6f},{:.6f},{:.3f},{:.3f}\n", m, perf.h2d.count(), perf.compute.count(), perf.d2h.count(), compute_flops * 1000, flops * 1000);
     } else {
         fmt::print("[mono] -- Time : {}s\n", time.count());
         fmt::print("[mono] -- Performance : {:.3f}Tflop/s\n", flops);

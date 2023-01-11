@@ -27,6 +27,7 @@ with open('./plot/req/' + file + ".csv", 'w') as f:
         h2d = 0
         d2h = 0
         compute = 0
+        perf_compute = 0
         perf = 0
 
         for j in range(3):
@@ -37,8 +38,9 @@ with open('./plot/req/' + file + ".csv", 'w') as f:
             h2d += float(decoded[1])
             compute += float(decoded[2])
             d2h += float(decoded[3])
-            perf += float(decoded[4])
+            perf_compute += float(decoded[4])
+            perf += float(decoded[5])
 
-        writer.writerow([i, h2d / 3, compute / 3, d2h / 3, perf / 3])
+        writer.writerow([i, h2d / 3, compute / 3, d2h / 3, perf_compute / 3, perf / 3])
 
 print("Done")

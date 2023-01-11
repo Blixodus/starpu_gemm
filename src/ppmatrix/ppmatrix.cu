@@ -9,6 +9,8 @@
 #include "../util/helper.hpp"
 #include "../util/lapackAPI.hpp"
 
+// #include <cutlass/cutlass.h>
+
 template <typename DataType>
 void PPMatrix<DataType>::rndFill() {
     std::random_device rd;

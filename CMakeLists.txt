@@ -144,6 +144,9 @@ find_package(CBLAS REQUIRED)
 # search for fmtlib
 find_package(fmt CONFIG REQUIRED)
 
+# search for cutlass
+# find_package(CUTLASS REQUIRED)
+
 # Add libraries
 # -------------
 
