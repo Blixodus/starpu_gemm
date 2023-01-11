@@ -107,10 +107,10 @@ starpu_codelet make_fill_cl() {
 	return {
 		.can_execute = can_execute,
 		.cpu_funcs = { fill_cpu_func<DataType> },
-// #ifdef USE_CUDA
-// 		.cuda_funcs = { fill_cuda_func<DataType> },
-// 		.cuda_flags = { STARPU_CUDA_ASYNC },
-// #endif
+#ifdef USE_CUDA
+		.cuda_funcs = { fill_cuda_func<DataType> },
+		.cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
 		.nbuffers = 1,
 		.modes = { STARPU_W },
 		.model = &model,
