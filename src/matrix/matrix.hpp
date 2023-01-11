@@ -12,7 +12,7 @@
 #include "fill_func.hpp"
 #include "asserteq_func.hpp"
 
-static constexpr int enable_cpu = 1;
+static constexpr int enable_cpu = 0;
 static constexpr int enable_gpu = 1;
 
 static int can_execute(unsigned workerid, struct starpu_task* task, unsigned nimpl) {
