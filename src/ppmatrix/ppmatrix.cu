@@ -432,6 +432,8 @@ PerfRecord ppgemm_f64(
     HANDLE_ERR(cudaFreeHost(C_h));
     HANDLE_ERR(cudaFreeHost(C_l));
 
+    HANDLE_ERR(cudaDeviceSynchronize());
+
     return perf;
 }
 
