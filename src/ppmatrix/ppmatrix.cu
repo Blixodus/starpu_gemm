@@ -414,6 +414,14 @@ PerfRecord ppgemm_f64(
     // STEP 10: precision-recompose C
     // ###################################################
 
+    // print C_h
+    for (int i = 0; i < C.rows; i++) {
+        for (int j = 0; j < C.cols; j++) {
+            fmt::print("C_h({},{}) = {}\n", i, j, C_h[i * C.cols + j]);
+        }
+    }
+    
+
     re_f64f32(C_h, C_l, C.ptr, C.rows, C.cols, C.ld);
 
     HANDLE_ERR(cudaFree(dA_h));

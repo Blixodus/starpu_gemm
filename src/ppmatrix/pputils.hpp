@@ -95,7 +95,7 @@ static void re_f64f32(const float* __restrict hi, float* __restrict lo, double* 
             double ai = static_cast<double>(hi[i * rows + j]);
             double bi = static_cast<double>(lo[i * rows + j]);
 
-            out[i * ld + j] = bi;
+            out[i * ld + j] = ai + bi;
         }
     }
 }
