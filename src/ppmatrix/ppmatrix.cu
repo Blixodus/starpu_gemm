@@ -622,7 +622,9 @@ __global__ void hello() {
 }
 
 void do_hello() {
+    fmt::print("doing hello...\n");
     hello<<<1, 1>>>();
+    cudaDeviceSynchronize();
 }
 
 template class PPMatrix<f32>;
