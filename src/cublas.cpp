@@ -96,6 +96,8 @@ void test_gemm(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
 }
 
 int main(int argc, char** argv) {
+    do_hello();
+
     u32 m, n, k;
 	bool quiet, run_checks;
     char type;
