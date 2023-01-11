@@ -134,3 +134,7 @@ __global__ void extractf32_mixedhl_flat(f64* __restrict src, f32* __restrict hi,
         lo[idx] = static_cast<f32>(src[idx] - static_cast<f64>(tmp));
     }
 }
+
+__global__ void hello() {
+    printf("hello!!!\n");
+}
