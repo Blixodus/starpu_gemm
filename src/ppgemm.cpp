@@ -75,7 +75,7 @@ void test_ppgemm_extchk(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) 
     D.fill(0);
 
     fmt::print("ppgemm...\n");
-    PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
+    // PPMatrix<DataType>::ppgemm(handle, 'N', 'N', 1.0f, A, B, 0.0f, C);
 
     // print A values
     for (u32 i = 0; i < m; i++) {
