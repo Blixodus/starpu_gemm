@@ -123,6 +123,11 @@ __global__ void extractf32_low_flat(f64* __restrict src, f32* __restrict dst, u3
 
 __global__ void extractf32_mixedhl_flat(f64* __restrict src, f32* __restrict hi, f32* __restrict lo, u32 size) {
     auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if (idx < size) {
+        printf("size=%d, val(%d) == %d", size, idx, src[idx]);
+    }
+    
     if (idx < size) {
         f32 tmp = static_cast<f32>(src[idx]);
         hi[idx] = tmp;
