@@ -214,6 +214,8 @@ PerfRecord ppgemm_f64(
     int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
     int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
 
+    fmt::print("hello from ppgemm!!\n");
+
     hello<<<1, 1>>>();
 
     PerfRecord perf;
