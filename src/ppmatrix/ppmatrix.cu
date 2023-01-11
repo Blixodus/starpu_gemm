@@ -255,6 +255,7 @@ PerfRecord ppgemm_f64(
     // streams are created as cudaStreamNonBlocking, meaning they do not
     // implicitly sync with the default stream
     cudaStream_t s1, s2, s3;
+    HANDLE_ERR(cudaStreamCreateWithFlags(&s0, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s1, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s2, cudaStreamNonBlocking));
     HANDLE_ERR(cudaStreamCreateWithFlags(&s3, cudaStreamNonBlocking));
