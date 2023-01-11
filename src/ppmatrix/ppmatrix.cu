@@ -205,6 +205,7 @@ PerfRecord ppgemm_f64(
     f64 beta,
     PPMatrix<f64>& C
 ) {
+    fmt::print("hello from ppgemm!!\n");
     assert(A.rows == C.rows);
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
