@@ -125,7 +125,7 @@ __global__ void extractf32_mixedhl_flat(f64* __restrict src, f32* __restrict hi,
     auto idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < size) {
         f32 tmp = static_cast<f32>(src[idx]);
-        hi[idx] = static_cast<f32>(src[idx] - static_cast<f64>(tmp));
-        lo[idx] = static_cast<f32>(src[idx] - static_cast<f64>(tmp));
+        hi[idx] = tmp;
+        lo[idx] = tmp;
     }
 }
