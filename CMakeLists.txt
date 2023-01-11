@@ -61,7 +61,7 @@ set( CMAKE_BUILD_WITH_INSTALL_RPATH FALSE )
 # Build shared libraries
 set( BUILD_SHARED_LIBS ON )
 
-set(CMAKE_VERBOSE_MAKEFILE OFF) 
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 # Check that the submodule exists and is up to date
 # -------------------------------------------------
