@@ -179,82 +179,86 @@ void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 	C.assertEq(static_cast<DataType>(k));
 }
 
-int main(int argc, char** argv) {
-    u32 m, n, k, b;
-    bool tiled, quiet, run_checks;
-    char type = 's';
-    parseArgs(argc, argv, m, n, k, b, tiled, quiet, run_checks, type);
+// int main(int argc, char** argv) {
+//     u32 m, n, k, b;
+//     bool tiled, quiet, run_checks;
+//     char type = 's';
+//     parseArgs(argc, argv, m, n, k, b, tiled, quiet, run_checks, type);
 
-    if (run_checks && (quiet || tiled)) {
-        fmt::print("Cannot run checks in quiet or tiled mode\n");
-        return 1;
-    }
+//     if (run_checks && (quiet || tiled)) {
+//         fmt::print("Cannot run checks in quiet or tiled mode\n");
+//         return 1;
+//     }
 
-    if (tiled) {
-        // init starpu
-        if(starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
-            throw std::exception();
-        }
+//     if (tiled) {
+//         // init starpu
+//         if(starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
+//             throw std::exception();
+//         }
 
-        #ifdef USE_CUDA
-            starpu_cublas_init();
-        #endif
+//         #ifdef USE_CUDA
+//             starpu_cublas_init();
+//         #endif
 
-        switch (type) {
-            case 's':
-                test_ppgemm_tiled<f32>(m, n, k, b, quiet);
-            break;
+//         switch (type) {
+//             case 's':
+//                 test_ppgemm_tiled<f32>(m, n, k, b, quiet);
+//             break;
 
-            case 'd':
-                test_ppgemm_tiled<f64>(m, n, k, b, quiet);
-            break;
+//             case 'd':
+//                 test_ppgemm_tiled<f64>(m, n, k, b, quiet);
+//             break;
 
-            default:
-                fmt::print("Invalid type: {}\n", type);
-                return 1;
-        }
+//             default:
+//                 fmt::print("Invalid type: {}\n", type);
+//                 return 1;
+//         }
 
-        #ifdef USE_CUDA
-            starpu_cublas_shutdown();
-        #endif
+//         #ifdef USE_CUDA
+//             starpu_cublas_shutdown();
+//         #endif
 
-        // shutdown starpu
-        starpu_mpi_shutdown();
-    } else {
-        cublasHandle_t handle;
-        if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
-            fmt::print("cublasCreate failed: {}\n", cudaGetErrorString(cudaGetLastError()));
-            return 1;
-        }
+//         // shutdown starpu
+//         starpu_mpi_shutdown();
+//     } else {
+//         cublasHandle_t handle;
+//         if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
+//             fmt::print("cublasCreate failed: {}\n", cudaGetErrorString(cudaGetLastError()));
+//             return 1;
+//         }
 
-        if (run_checks) {
-            switch (type) {
-                case 's':
-                    test_ppgemm_extchk<f32>(handle, m, n, k, quiet);
-                break;
+//         if (run_checks) {
+//             switch (type) {
+//                 case 's':
+//                     test_ppgemm_extchk<f32>(handle, m, n, k, quiet);
+//                 break;
 
-                case 'd':
-                    test_ppgemm_extchk<f64>(handle, m, n, k, quiet);
-                break;
+//                 case 'd':
+//                     test_ppgemm_extchk<f64>(handle, m, n, k, quiet);
+//                 break;
 
-                default:
-                    fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
-                    return 1;
-            }
-        } else {
-            switch (type) {
-                case 's':
-                    test_ppgemm_mono<f32>(handle, m, n, k, quiet);
-                break;
+//                 default:
+//                     fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
+//                     return 1;
+//             }
+//         } else {
+//             switch (type) {
+//                 case 's':
+//                     test_ppgemm_mono<f32>(handle, m, n, k, quiet);
+//                 break;
 
-                case 'd':
-                    test_ppgemm_mono<f64>(handle, m, n, k, quiet);
-                break;
+//                 case 'd':
+//                     test_ppgemm_mono<f64>(handle, m, n, k, quiet);
+//                 break;
 
-                default:
-                    fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
-                    return 1;
-            }
-        }
-    }
+//                 default:
+//                     fmt::print("Invalid type: {}, must be 's' or 'd'\n", type);
+//                     return 1;
+//             }
+//         }
+//     }
+// }
+
+int main() {
+    do_hello();
 }
