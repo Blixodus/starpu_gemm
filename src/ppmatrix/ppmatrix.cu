@@ -278,6 +278,9 @@ PerfRecord ppgemm_f64(
     auto start = std::chrono::high_resolution_clock::now();
 
     hello<<<1, 1, 0, s0>>>();
+    hello<<<1, 1, 0, s1>>>();
+    hello<<<1, 1, 0, s2>>>();
+    hello<<<1, 1, 0, s3>>>();
 
     // copy A_h to GPU
     HANDLE_ERR(cudaMemcpyAsync(dA_h, A_h, A.rows * A.cols * sizeof(float), cudaMemcpyHostToDevice, s0));
