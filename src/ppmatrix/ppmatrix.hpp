@@ -8,6 +8,8 @@
 template <typename DataType>
 struct PPMatrix;
 
+void do_hello();
+
 PerfRecord ppgemm_f32(
     cublasHandle_t handle,
     char transA,

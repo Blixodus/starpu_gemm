@@ -205,7 +205,6 @@ PerfRecord ppgemm_f64(
     f64 beta,
     PPMatrix<f64>& C
 ) {
-    fmt::print("hello from ppgemm!!\n");
     assert(A.rows == C.rows);
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
@@ -213,10 +212,6 @@ PerfRecord ppgemm_f64(
     int m = checked_cast<int>((transA == 'N') ? A.rows : A.cols);
     int n = checked_cast<int>((transB == 'N') ? B.cols : B.rows);
     int k = checked_cast<int>((transA == 'N') ? A.cols : A.rows);
-
-    fmt::print("hello from ppgemm!!\n");
-
-    hello<<<1, 1>>>();
 
     PerfRecord perf;
 
@@ -620,6 +615,14 @@ DataType PPMatrix<DataType>::norm2() const {
     }
 
     return S[0];
+}
+
+__global__ void hello() {
+    printf("HELLO FROM CUDA\n");
+}
+
+void do_hello() {
+    hello<<<1, 1>>>();
 }
 
 template class PPMatrix<f32>;
