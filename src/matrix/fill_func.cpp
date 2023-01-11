@@ -29,8 +29,6 @@ __global__ void fill_kernel(DataType* mat, u32 rows, u32 cols, u32 ld, DataType 
 	auto i = blockIdx.x * blockDim.x + threadIdx.x;
 	auto j = blockIdx.y * blockDim.y + threadIdx.y;
 
-	printf("ok je suis la\n");
-
 	if ((i < rows) && (j < cols)) {
 		mat[j * ld + i] = val;
 	}
