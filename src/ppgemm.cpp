@@ -7,6 +7,7 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+#include <stdexcept>
 #include <fmt/core.h>
 
 #include "cublas_v2.h"
@@ -29,8 +30,9 @@ void printHelp() {
 			  << "  -n               --  Set the size of N (as log)\n"
 			  << "  -k               --  Set the size of K (as log)\n"
 			  << "  -b               --  Set the block size (as log)\n"
-			  << "  -t               --  Enable tiled mode"
 			  << "  -q               --  Quiet mode"
+			  << "  -t <s/d>  		 --  Set the data type (double/single)\n"
+              << "  --tiled          --  Enable tiled mode"
 			  << "  --run-checks     --  run advanced checks" << std::endl;
 }
 
@@ -145,6 +147,8 @@ void test_ppgemm_mono(cublasHandle_t handle, u32 m, u32 n, u32 k, bool quiet) {
 
 template<typename DataType>
 void test_ppgemm_tiled(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
+    throw std::runtime_error("unimplemented!");
+
 	if (!quiet) {
         fmt::print("[tiled] Redux={} CPU={} GPU={} M={} N={} K={} BS={}, DT={}\n",
             ENABLE_REDUX, enable_cpu, enable_gpu, m, n, k, block_size, type_name<DataType>());

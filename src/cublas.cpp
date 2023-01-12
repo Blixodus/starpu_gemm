@@ -8,13 +8,13 @@
 
 void printHelp() {
 	std::cout << "Parameters for gemm:\n"
-			  << "  -m           --  Set the size of M (as log)\n"
-			  << "  -n           --  Set the size of N (as log)\n"
-			  << "  -k           --  Set the size of K (as log)\n"
-			  << "  -b           --  Set the block size (as log)\n"
-			  << "  -g           --  Set the number of GPUs used for task execution\n"
-			  << "  -t <s/d>     --  Set the data type (double/single)\n"
-			  << "  --run-checks" << std::endl;
+			  << "  -m               --  Set the size of M (as log)\n"
+			  << "  -n               --  Set the size of N (as log)\n"
+			  << "  -k               --  Set the size of K (as log)\n"
+			  << "  -b               --  Set the block size (as log)\n"
+			  << "  -g               --  Set the number of GPUs used for task execution\n"
+			  << "  -t <s/d>         --  Set the data type (double/single)\n"
+			  << "  --run-checks     --  run advanced checks" << std::endl;
 }
 
 void parseArgs(

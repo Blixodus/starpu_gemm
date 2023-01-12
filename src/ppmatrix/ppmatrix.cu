@@ -54,6 +54,8 @@ PerfRecord ppgemm_f32(
     f32 beta,
     PPMatrix<f32>& C
 ) {
+    throw std::runtime_error("unimplemented!");
+
     assert(A.rows == C.rows);
     assert(B.cols == C.cols);
     assert(A.cols == B.rows);
@@ -296,9 +298,9 @@ PerfRecord ppgemm_f64(
     // launch the kernel in blocks of 256 threads
     // we removed the LD when we decomposed the initial matrices
     // from now on, we can treat the buffers as matrices where ld = rows
-    f32tof64_flat<<<ceilDiv(A.rows * A.cols, 256U), 256, 0, s0>>>(dA_h, dA_dgemm, A.rows * A.cols);
+    HANDLE_KRNL_ERR((f32tof64_flat<<<ceilDiv(A.rows * A.cols, 256U), 256, 0, s0>>>(dA_h, dA_dgemm, A.rows * A.cols)));
 
-    f32tof64_flat<<<ceilDiv(B.rows * B.cols, 256U), 256, 0, s2>>>(dB_h, dB_dgemm, B.rows * B.cols);
+    HANDLE_KRNL_ERR((f32tof64_flat<<<ceilDiv(B.rows * B.cols, 256U), 256, 0, s2>>>(dB_h, dB_dgemm, B.rows * B.cols)));
 
     // notify that the conversion is done for dB_h
     HANDLE_ERR(cudaEventRecord(e0, s2));
@@ -336,7 +338,9 @@ PerfRecord ppgemm_f64(
 
     // perform the decomposition immediatly on s0 because
     // it is the stream which performed the dgemm
-    extractf32_mixedhl_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, dC_l, C.rows * C.cols);
+    HANDLE_KRNL_ERR((
+        extractf32_mixedhl_flat<<<ceilDiv(C.rows * C.cols, 256U), 256, 0, s0>>>(dRes_dgemm, dC_h, dC_l, C.rows * C.cols)
+    ));
     
     HANDLE_ERR(cudaEventRecord(e0, s0)); // s0 finished the decomposition
 

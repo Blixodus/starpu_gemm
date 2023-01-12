@@ -60,13 +60,12 @@ void test_gemm(u32 m, u32 n, u32 k, u32 block_size, bool quiet) {
 
 void printHelp() {
 	std::cout << "Parameters for gemm:\n"
-			  << "  -m        --  Set the size of M (as log)\n"
-			  << "  -n        --  Set the size of N (as log)\n"
-			  << "  -k        --  Set the size of K (as log)\n"
-			  << "  -b        --  Set the block size (as log)\n"
-			  << "  -g        --  Set the number of GPUs used for task execution\n"
-			  << "  -t <s/d>  --  Set the data type (double/single)\n"
-			  << "  --perf-test  --  Test CUBLAS performace on given sizes" << std::endl;
+			  << "  -m        		 --  Set the size of M (as log)\n"
+			  << "  -n        		 --  Set the size of N (as log)\n"
+			  << "  -k        		 --  Set the size of K (as log)\n"
+			  << "  -b        		 --  Set the block size (as log)\n"
+			  << "  -g        		 --  Set the number of GPUs used for task execution\n"
+			  << "  -t <s/d>  		 --  Set the data type (double/single)" << std::endl;
 }
 
 void parseArgs(

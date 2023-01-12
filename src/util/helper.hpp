@@ -62,6 +62,15 @@ inline void handle_err(cublasStatus_t status, int line) {
 		throw std::exception();
 	}
 }
+
+#define HANDLE_KRNL_ERR(expr) { expr; handle_krnl_err(__LINE__); }
+
+inline void handle_krnl_err(int line) {
+	auto status = cudaGetLastError();
+	if (__builtin_expect(status != cudaSuccess, 0)) {
+		fmt::print("CUDA error at line {} while running a kernel:\n{}\n", line, cudaGetErrorString(status));
+	}
+}
 #endif
 
 #define STARPU_MATRIX_LD(x) STARPU_MATRIX_GET_LD((x))
