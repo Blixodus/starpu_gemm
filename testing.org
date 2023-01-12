@@ -17,30 +17,15 @@ Set ~[username]~ to your username
   . "$GUIX_PROFILE/etc/profile"
 #+end_src
 
-To setup your Guix environment you will need the correct channels (Guix-HPC and Guix-HPC-non-free). Add these to ~$HOME/.config/guix/channels.scm~
+To setup your Guix environment you will need the correct channel (Guix GEMM). Add these to ~$HOME/.config/guix/channels.scm~
 
 #+begin_src scheme
   (list (channel
-         (name 'guix)
-         (url "https://git.savannah.gnu.org/git/guix.git")
-         (branch "master")
-         (commit
-          "f572de77c4fda3347bea16b4c86d630b193291dc"))
-        (channel
-         (name 'guix-hpc-non-free)
-         (url "https://gitlab.inria.fr/guix-hpc/guix-hpc-non-free.git")
-         (branch "master")
-         (commit
-          "e77426506e0384cf847db94541314896c617cad6"))
-        (channel
-         (name 'guix-hpc)
-         (url "https://gitlab.inria.fr/guix-hpc/guix-hpc.git")
-         (branch "master")
-         (commit
-          "81b2648583d3b6aff4d3abc999a3c7fe70907e25")))
+         (name 'guix-gemm)
+         (url "https://github.com/Blixodus/guix-gemm.git")
 #+end_src
 
-Do not forget to ~guix pull~
+Do not forget to ~guix pull --allow-downgrades~
 
 ** Environment variables to set
 #+begin_src shell
@@ -48,28 +33,43 @@ Do not forget to ~guix pull~
   export STARPU_RESERVE_NCPU=1 #Reserve 1 CPU to be used by StarPU for other things than task execution
   export STARPU_SCHED=lws      #Set the StarPU scheduler to lws (or other)
 
+  export LD_PRELOAD=/usr/lib64/libcuda.so  #Set this to preload the CUDA driver for Guix
+
   export OMPI_MCA_btl=^openib  #Set these to avoid some MPI errors (optional - the errors are not real)
   export OMPI_MCA_osc=^ucx
   export OMPI_MCA_pml=^ucx
 #+end_src
 
-** Execute code (PlaFRIM : Works only without CUDA)
-You can create a Guix shell with the GEMM example and Chameleon using the following command
+** Execute code
+You can create a Guix shell with the GEMM example and Chameleon using one of the following commands
 
+Non-CUDA Non-MPI
 #+BEGIN_SRC shell
-  guix shell --pure --preserve="^OMPI_MCA|^SLURM|^STARPU|^OMP" starpu-example-cppgemm chameleon openssh slurm@22 --with-branch=starpu-example-cppgemm=main --with-branch=starpu=master
+  guix shell --pure  cppgemm openssh --with-branch=cppgemm=main
 #+END_SRC
 
+CUDA Non-MPI
 #+BEGIN_SRC shell
-  LD_PRELOAD=/usr/lib64/libcuda.so guix shell --pure --preserve=^LD_PRELOAD chameleon-cuda starpu-example-cppgemm-cuda openssh --with-commit=starpu-cuda=8654bf062cddb87e7b23ef62ad13a0f5f1e18c77 --with-branch=starpu-example-cppgemm-cuda=main
+  guix shell --pure --preserve="^LD_PRELOAD" cppgemm-cuda openssh --with-branch=cppgemm-cuda=main
+#+END_SRC
+
+Non-CUDA MPI
+#+BEGIN_SRC shell
+  guix shell --pure --preserve="^OMPI_MCA|^SLURM" cppgemm openssh slurm@22 --with-branch=cppgemm=main
+#+END_SRC
+
+CUDA MPI
+#+BEGIN_SRC shell
+  guix shell --pure --preserve="^LD_PRELOAD|^OMPI_MCA|^SLURM" cppgemm-cuda openssh slurm@22 --with-branch=cppgemm-cuda=main
 #+END_SRC
 
 In the Guix shell you can execute with e.g.
 
 #+BEGIN_SRC shell
   gemm [params]
-  chameleon_stesting [params]
   srun -l gemm [params]
+  
+  chameleon_stesting [params]
   srun -l chameleon_stesting [params]
 #+END_SRC
 
