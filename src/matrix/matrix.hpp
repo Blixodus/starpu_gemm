@@ -32,7 +32,7 @@ starpu_codelet make_gemm_cl() {
 
 	return {
 		.can_execute = can_execute,
-	  .cpu_funcs = { gemm_cpu_func<DataType> },
+	  	.cpu_funcs = { gemm_cpu_func<DataType> },
 #ifdef USE_CUDA
 		.cuda_funcs = { gemm_cuda_func<DataType> },
 		.cuda_flags = { STARPU_CUDA_ASYNC },
@@ -107,10 +107,10 @@ starpu_codelet make_fill_cl() {
 	return {
 		.can_execute = can_execute,
 		.cpu_funcs = { fill_cpu_func<DataType> },
-// #ifdef USE_CUDA
-// 		.cuda_funcs = { fill_cuda_func<DataType> },
-// 		.cuda_flags = { STARPU_CUDA_ASYNC },
-// #endif
+#ifdef USE_CUDA
+		.cuda_funcs = { fill_cuda_func<DataType> },
+		.cuda_flags = { STARPU_CUDA_ASYNC },
+#endif
 		.nbuffers = 1,
 		.modes = { STARPU_W },
 		.model = &model,
@@ -145,8 +145,8 @@ starpu_codelet make_asserteq_cl() {
 		.can_execute = can_execute,
 		.cpu_funcs = {asserteq_cpu_func<DataType>},
 #ifdef USE_CUDA
-		// .cuda_funcs = {asserteq_cuda_func<DataType>},
-		// .cuda_flags = { STARPU_CUDA_ASYNC },
+		.cuda_funcs = {asserteq_cuda_func<DataType>},
+		.cuda_flags = { STARPU_CUDA_ASYNC },
 #endif
 		.nbuffers = 1,
 		.modes = {STARPU_R},
@@ -162,7 +162,7 @@ template <typename DataType>
 struct MatrixData {
 	u32 row_blocks, col_blocks;
 	std::vector<starpu_data_handle_t> data_handle;
-  std::vector<int> owner_node;
+  	std::vector<int> owner_node;
 
 	MatrixData(u32 rows, u32 cols, u32 block_size)
 		: row_blocks(ceilDiv(rows, block_size)),
@@ -175,7 +175,7 @@ struct MatrixData {
 		starpu_mpi_comm_size(MPI_COMM_WORLD, &size);
 
 		auto row_final = (rows % block_size) ? (rows % block_size) : block_size;
-    auto col_final = (cols % block_size) ? (cols % block_size) : block_size;
+    	auto col_final = (cols % block_size) ? (cols % block_size) : block_size;
 
 		for (u32 i = 0; i < row_blocks; i++) {
 			for (u32 j = 0; j < col_blocks; j++) {
