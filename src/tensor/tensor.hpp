@@ -174,40 +174,45 @@ struct Tensor {
 
 	void fill(DataType e) {
 		for(auto& block_handle : data_handle.data_handles) {
-      int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_fill_cl<DataType>,
-                                       STARPU_VALUE, &e, sizeof(e),
-                                       STARPU_W, block_handle,
-                                       NULL);
-			if(err) {
-				throw std::exception();
+      		int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_fill_cl<DataType>,
+							STARPU_VALUE, &e, sizeof(e),
+							STARPU_W, block_handle,
+							NULL);
+			if (err) {
+				throw std::runtime_error(fmt::format("Error in Tensor<{}>::fill while inserting task: {}", pretty_type_name_v<DataType>, err));
 			}
-      std::cout << "Task inserted [fill] (handle=" << block_handle << ")" << std::endl;
+
+			fmt::print("Task inserted [fill] (handle={})\n", (void*){block_handle});
 		}
 	}
 
 	void assertEq(DataType e) {
 		for(auto& block_handle : data_handle.data_handles) {
-      int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_asserteq_cl<DataType>,
-                                       STARPU_VALUE, &e, sizeof(e),
-                                       STARPU_R, block_handle,
-                                       NULL);
-			if(err) {
-				throw std::exception();
+      		int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_asserteq_cl<DataType>,
+							STARPU_VALUE, &e, sizeof(e),
+							STARPU_R, block_handle,
+							NULL);
+
+			if (err) {
+				throw std::runtime_error(fmt::format("Error in Tensor<{}>::assertEq while inserting task: {}", pretty_type_name_v<DataType>, err));
 			}
-      std::cout << "Task inserted [assert equal] (handle=" << block_handle << ")" << std::endl;
+
+			fmt::print("Task inserted [assertEq] (handle={})\n", (void*){block_handle});
 		}
 	}
 
 	void print(char tag) {
 		for (auto& block_handle : data_handle.data_handles) {
 			int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_print_cl<DataType>,
-                                       STARPU_VALUE, &tag, sizeof(tag),
-                                       STARPU_R, block_handle,
-                                       NULL);
-			if(err) {
-				throw std::exception();
+							STARPU_VALUE, &tag, sizeof(tag),
+							STARPU_R, block_handle,
+							NULL);
+
+			if (err) {
+				throw std::runtime_error(fmt::format("Error in Tensor<{}>::print while inserting task: {}", pretty_type_name_v<DataType>, err));
 			}
-      std::cout << "Task inserted [print] (handle=" << block_handle << ")" << std::endl;
+
+			fmt::print("Task inserted [print] (handle={})\n", (void*){block_handle});
 		}
 	}
 
@@ -222,13 +227,18 @@ struct Tensor {
 			auto block_handle_A = A.data_handle.get(curr_block);
 			auto block_handle_B = B.data_handle.get(curr_block);
 			auto block_handle_C = C.data_handle.get(curr_block);
+
 			int err = starpu_mpi_task_insert(MPI_COMM_WORLD, &tensor_add_cl<DataType>,
-                                       STARPU_R, block_handle_A,
-                                       STARPU_R, block_handle_B,
-                                       STARPU_RW, block_handle_C,
-                                       NULL);
-			if(err) { throw std::exception(); }
-			std::cout << "Task inserted [add] (handle_A=" << block_handle_A << ", handle_B=" << block_handle_B << ", handle_C=" << block_handle_C << ")" << std::endl;
+							STARPU_R, block_handle_A,
+							STARPU_R, block_handle_B,
+							STARPU_RW, block_handle_C,
+							NULL);
+
+			if (err) {
+				throw std::runtime_error(fmt::format("Error in Tensor<{}>::add while inserting task: {}", pretty_type_name_v<DataType>, err));
+			}
+
+			fmt::print("Task inserted [add] (handle_A={}, handle_B={}, handle_C={})\n", (void*){block_handle_A}, (void*){block_handle_B}, (void*){block_handle_C});
 		}
 	}
 };

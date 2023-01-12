@@ -38,12 +38,12 @@ using f64 = double;
 using f16 	= __half;
 using bf16 	= __nv_bfloat16;
 
-inline cublasOperation_t convertToCublas(char trans) {
+inline constexpr cublasOperation_t convertToCublas(char trans) {
 	switch (trans) {
 		case 'N': return CUBLAS_OP_N;
 		case 'T': return CUBLAS_OP_T;
 		case 'C': return CUBLAS_OP_C;
-		default: throw std::exception();
+		default: throw std::runtime_error(fmt::format("Invalid cublas transformation: {}", trans));
 	}
 }
 
@@ -51,15 +51,13 @@ inline cublasOperation_t convertToCublas(char trans) {
 
 inline void handle_err(cudaError_t val, int line) {
     if (__builtin_expect(val != cudaSuccess, 0)) {
-        fmt::print("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError()));
-        throw std::exception();
+        throw std::runtime_error(fmt::format("CUDA error at line {}: {}\n", line, cudaGetErrorString(cudaGetLastError())));
     }
 }
 
 inline void handle_err(cublasStatus_t status, int line) {
 	if (__builtin_expect(status != CUBLAS_STATUS_SUCCESS, 0)) {
-		fmt::print("CUBLAS error at line {}: {}\n", line, status);
-		throw std::exception();
+		throw std::runtime_error(fmt::format("CUBLAS error at line {}: {}\n", line, status));
 	}
 }
 
@@ -68,7 +66,9 @@ inline void handle_err(cublasStatus_t status, int line) {
 inline void handle_krnl_err(int line) {
 	auto status = cudaGetLastError();
 	if (__builtin_expect(status != cudaSuccess, 0)) {
-		fmt::print("CUDA error at line {} while running a kernel:\n{}\n", line, cudaGetErrorString(status));
+		throw std::runtime_error(
+			fmt::format("CUDA error at line {} while running a kernel:\n{}\n", line, cudaGetErrorString(status))
+		);
 	}
 }
 #endif

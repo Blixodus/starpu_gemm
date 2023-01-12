@@ -235,7 +235,7 @@ struct Matrix {
 				);
 
 				if (err) {
-					throw std::exception();
+					throw std::runtime_error(fmt::format("Error in Matrix<{}>::fill while inserting task: {}", pretty_type_name_v<DataType>, err));
 				}
 			}
 		}
@@ -257,7 +257,7 @@ struct Matrix {
 				);
 
 				if (err) {
-					throw std::exception();
+					throw std::runtime_error(fmt::format("Error in Matrix<{}>::print while inserting task: {}", pretty_type_name_v<DataType>, err));
 				}
 			}
 		}
@@ -276,7 +276,7 @@ struct Matrix {
 				);
 
 				if (err) {
-					throw std::exception();
+					throw std::runtime_error(fmt::format("Error in Matrix<{}>::assertEq while inserting task: {}", pretty_type_name_v<DataType>, err));
 				}
 			}
 		}
@@ -317,31 +317,41 @@ struct Matrix {
 					auto A_sub_handle = A.data_handle.get(i, k);
 					auto B_sub_handle = B.data_handle.get(k, j);
 
-          if(rank == A.data_handle.get_owner(i, k) || rank == B.data_handle.get_owner(k, j) || rank == C.data_handle.get_owner(i, j)) {
-            auto err = starpu_mpi_task_insert(
-                                              MPI_COMM_WORLD, &gemm_cl<DataType>,
-                                              STARPU_VALUE, &transA, sizeof(transA),
-                                              STARPU_VALUE, &transB, sizeof(transB),
-                                              STARPU_VALUE, &alpha, sizeof(alpha),
-                                              STARPU_VALUE, &beta, sizeof(beta),
-                                              STARPU_R, A_sub_handle,
-                                              STARPU_R, B_sub_handle,
-#if ENABLE_REDUX != 0
-                                              STARPU_MPI_REDUX, C_sub_handle,
-#else
-                                              STARPU_RW, C_sub_handle,
-#endif
-                                              STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
-                                              STARPU_EXECUTE_ON_DATA, A_sub_handle,
-                                              NULL
-                                              );
-            if (err) { throw std::exception(); }
-          }
+          			if (
+						(rank == A.data_handle.get_owner(i, k)) || 
+						(rank == B.data_handle.get_owner(k, j)) || 
+						(rank == C.data_handle.get_owner(i, j))
+					) {
+           				auto err = starpu_mpi_task_insert(
+							MPI_COMM_WORLD, &gemm_cl<DataType>,
+							STARPU_VALUE, &transA, sizeof(transA),
+							STARPU_VALUE, &transB, sizeof(transB),
+							STARPU_VALUE, &alpha, sizeof(alpha),
+							STARPU_VALUE, &beta, sizeof(beta),
+							STARPU_R, A_sub_handle,
+							STARPU_R, B_sub_handle,
+						#if ENABLE_REDUX != 0
+							STARPU_MPI_REDUX, C_sub_handle,
+						#else
+							STARPU_RW, C_sub_handle,
+						#endif
+							STARPU_FLOPS, double(2L * starpu_matrix_get_nx(C_sub_handle) * starpu_matrix_get_ny(C_sub_handle) * starpu_matrix_get_ny(A_sub_handle)),
+							STARPU_EXECUTE_ON_DATA, A_sub_handle,
+							NULL
+						);
+
+            			if (err) {
+							throw std::runtime_error(fmt::format("Error in Matrix<{}>::gemm while inserting task: {}", pretty_type_name_v<DataType>, err));
+						}
+          			}
 				}
-#if ENABLE_REDUX != 0
-        auto err = starpu_mpi_redux_data(MPI_COMM_WORLD, C_sub_handle);
-        if (err) { throw std::exception(); }
-#endif
+
+			#if ENABLE_REDUX != 0
+				auto err = starpu_mpi_redux_data(MPI_COMM_WORLD, C_sub_handle);
+				if (err) {
+					throw std::runtime_error(fmt::format("Error in Matrix<{}>::gemm in mpi_redux_data: {}", pretty_type_name_v<DataType>, err));
+				}
+			#endif
 			}
 		}
 	}
@@ -355,6 +365,6 @@ struct Matrix {
 		DataType beta,
 		Matrix<DataType>& C
 	) {
-
+		throw std::runtime_error("Unimplemented!");
 	}
 };

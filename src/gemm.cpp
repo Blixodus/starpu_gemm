@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
 	parseArgs(argc, argv, m, n, k, b, type, quiet);
 
 	if (starpu_mpi_init_conf(&argc, &argv, 1, MPI_COMM_WORLD, NULL)) {
-		throw std::exception();
+		throw std::runtime_error("Unable to init starpu_mpi");
 	}
 
 #ifdef USE_CUDA
